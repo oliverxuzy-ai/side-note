@@ -1,71 +1,138 @@
 import SwiftUI
 
-/// M0 placeholder · 主侧边栏面板的 SwiftUI 视图。
+/// M1 · 主侧边栏面板视图。
 ///
-/// 这只是脚手架。展示：
-/// - DESIGN.md 里 canvas 色 `#F1F2E9` 已落地（无 vibrancy，M1 加）
-/// - PP Editorial New 字体未加载（M3 加），暂用系统衬线
-/// - 一段"M0 工作正常"的提示文字
+/// 三层结构：
+/// 1. NSVisualEffectView 材质（vibrancy）
+/// 2. Color.canvas at 92% opacity（sage tint，让 ~8% 桌面壁纸透过来）
+/// 3. SwiftUI 内容层（search + notes list + new-note button）
 ///
-/// M1 会替换为：
-/// - NSVisualEffectView 材质 + 92% canvas 色叠层
-/// - 滑入 / 滑出动画（spring response 0.32, damping 0.78, 12pt content parallax）
-/// - 全局热键 + 边缘悬停触发集成
+/// 第三层挂在 `controller.isContentPresented` 上 —— 它是 spring + parallax + alpha 的动画触发源。
+/// 时序由 PanelController 拍板：panel 位置开始动 80ms 后，content 才开始动。
+/// 两层不同节奏 = 你眼睛看到的是「层次」而不是「位移」。
 struct SidebarPanelView: View {
 
-    /// canvas 色 #F1F2E9（sage-tinted near-white）—— v1 light 主题主背景。
-    /// M1 之后这一层会被 NSVisualEffectView + 92% 不透明 sage 叠层替换。
-    private let canvas = Color(red: 0xF1 / 255.0, green: 0xF2 / 255.0, blue: 0xE9 / 255.0)
-
-    /// 暖近黑文本主色 #1F1E18。
-    private let textPrimary = Color(red: 0x1F / 255.0, green: 0x1E / 255.0, blue: 0x18 / 255.0)
-
-    /// 次要文字 #75726A。
-    private let textMuted = Color(red: 0x75 / 255.0, green: 0x72 / 255.0, blue: 0x6A / 255.0)
-
-    /// Sage refined rosemary #6E8060 —— v1 唯一的 accent。
-    private let accent = Color(red: 0x6E / 255.0, green: 0x80 / 255.0, blue: 0x60 / 255.0)
+    /// `@Bindable` 让 SwiftUI 追踪 @Observable 类的属性变化。
+    @Bindable var controller: PanelController
 
     var body: some View {
         ZStack {
-            canvas
+            // ---- Layer 1: vibrancy 材质 ----
+            VisualEffectBackground()
 
-            VStack(spacing: 16) {
-                Spacer()
+            // ---- Layer 2: 92% canvas (sage tint) ----
+            Color.canvas.opacity(0.92)
 
-                Text("side-note")
-                    .font(.system(size: 36, weight: .regular, design: .serif))
-                    .foregroundStyle(textPrimary)
-
-                Text("M0 · scaffolding works")
-                    .font(.system(size: 13, weight: .medium))
-                    .tracking(0.5)
-                    .foregroundStyle(accent)
-                    .textCase(.uppercase)
-
-                Text("Click the menu bar icon to toggle this panel.\nNext milestone (M1): the slide-in spike.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(textMuted)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-                    .padding(.horizontal, 32)
-                    .padding(.top, 8)
-
-                Spacer()
-
-                // Visual canary: a pinned-pin sketch using the sage accent.
-                // In M3 this becomes the real ceramic pin shape. M0 just shows the color reads correctly.
-                Circle()
-                    .fill(accent)
-                    .frame(width: 10, height: 10)
-                    .padding(.bottom, 32)
-            }
+            // ---- Layer 3: 内容（带 parallax + alpha） ----
+            contentLayer
+                .offset(x: controller.isContentPresented ? 0 : PanelGeometry.contentParallax)
+                .opacity(controller.isContentPresented ? 1 : 0)
+                .animation(
+                    controller.isContentPresented ? .slideInContent : .slideOutContent,
+                    value: controller.isContentPresented
+                )
         }
-        .frame(width: 380, height: 720)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .frame(width: PanelGeometry.width, height: PanelGeometry.height)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
+    }
+
+    // MARK: - Content layer
+
+    private var contentLayer: some View {
+        VStack(spacing: 0) {
+            searchBar
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, 18)
+                .padding(.bottom, 14)
+
+            Divider()
+                .overlay(.faintLine)
+
+            notesList
+
+            Divider()
+                .overlay(.faintLine)
+
+            footer
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+        }
+    }
+
+    // MARK: - Search bar
+
+    private var searchBar: some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.textMuted)
+
+            Text("Search notes…")
+                .font(.system(size: 13))
+                .foregroundStyle(.textFaint)
+
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.black.opacity(0.035))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.md - 2, style: .continuous)
+                .stroke(.hairline, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: Radius.md - 2, style: .continuous))
+    }
+
+    // MARK: - Notes list
+
+    private var notesList: some View {
+        ScrollView {
+            LazyVStack(spacing: 10) {
+                ForEach(MockNote.samples) { note in
+                    NoteCard(note: note)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 16)
+        }
+        .scrollIndicators(.never)
+    }
+
+    // MARK: - Footer
+
+    private var footer: some View {
+        HStack {
+            Button(action: {}) {
+                HStack(spacing: 4) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .regular))
+                    Text("New note")
+                        .font(.system(size: 12.5, weight: .medium))
+                }
+                .foregroundStyle(Color.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color.sage)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+                .shadow(color: .black.opacity(0.12), radius: 1, y: 1)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            Text("\(MockNote.samples.count) notes · \(MockNote.samples.filter(\.pinned).count) pinned")
+                .font(.system(size: 11))
+                .tracking(0.4)
+                .foregroundStyle(.textFaint)
+        }
     }
 }
 
-#Preview("Sidebar · M0") {
-    SidebarPanelView()
+#Preview("Sidebar · M1 (preview only — slide-in invisible in Xcode Preview)") {
+    SidebarPanelView(controller: PanelController())
+        .frame(width: PanelGeometry.width, height: PanelGeometry.height)
+        .onAppear {
+            // Force content visible in Preview (Preview doesn't have NSPanel to trigger it)
+        }
 }

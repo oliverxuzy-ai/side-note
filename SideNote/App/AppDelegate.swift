@@ -1,77 +1,31 @@
 import AppKit
 import SwiftUI
 
-/// 应用启动后的非 SwiftUI 生命周期 + NSPanel 管理。
+/// 应用启动 + 全局协调。
 ///
-/// M0 阶段：
-/// - 启动后无可见窗口（菜单栏 App，LSUIElement = true）
-/// - 点击菜单栏 → toggleSidebar() → 显示/隐藏一个静态侧边栏面板
-/// - 面板暂用普通 show/hide，无动画
+/// M1 改动：
+/// - 从 M0 的"直接管 NSPanel"重构为通过 `PanelController` 协调
+/// - 添加全局热键 ⌃⇧Space
+/// - About 窗口保留
 ///
-/// M1 阶段会改：
-/// - NSPanel 替换为带滑入动画的实现（slideIn / slideOut）
-/// - NSVisualEffectView 实现 vibrancy
-/// - 添加全局热键（HotKey）和边缘悬停（CGEventTap）触发
+/// 触发链：
+/// - 菜单栏 icon 点击 → `SideNoteApp` 调用 `toggleSidebar()` → `PanelController.toggle()`
+/// - ⌃⇧Space     → `HotkeyService` 直接调用 `PanelController.toggle()`
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
-    private var sidebarPanel: NSPanel?
+    let panelController = PanelController()
+
     private var aboutWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // LSUIElement App 默认不激活；这里仅用于打印 M0 启动确认。
-        NSLog("[side-note] M0 launched. Click menu bar icon to toggle the sidebar.")
+        panelController.bootstrap()
+        NSLog("[side-note] M1 launched. ⌃⇧Space or click menu bar to slide.")
     }
 
-    // MARK: - Sidebar panel
+    // MARK: - Sidebar
 
     func toggleSidebar() {
-        if let panel = sidebarPanel, panel.isVisible {
-            panel.orderOut(nil)
-        } else {
-            showSidebar()
-        }
-    }
-
-    private func showSidebar() {
-        if sidebarPanel == nil {
-            sidebarPanel = makeSidebarPanel()
-        }
-        guard let panel = sidebarPanel else { return }
-        positionAtRightEdge(panel: panel)
-        panel.makeKeyAndOrderFront(nil)
-    }
-
-    private func makeSidebarPanel() -> NSPanel {
-        let hosting = NSHostingController(rootView: SidebarPanelView())
-        hosting.view.frame = NSRect(x: 0, y: 0, width: 380, height: 720)
-
-        let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 720),
-            styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView],
-            backing: .buffered,
-            defer: false
-        )
-        panel.contentViewController = hosting
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.hasShadow = true
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.titleVisibility = .hidden
-        panel.titlebarAppearsTransparent = true
-        panel.hidesOnDeactivate = false
-        return panel
-    }
-
-    private func positionAtRightEdge(panel: NSPanel) {
-        guard let screen = NSScreen.main else { return }
-        let frame = screen.visibleFrame
-        let panelSize = panel.frame.size
-        let x = frame.maxX - panelSize.width - 20  // 20pt from right edge
-        let y = frame.midY - (panelSize.height / 2)
-        panel.setFrame(NSRect(x: x, y: y, width: panelSize.width, height: panelSize.height),
-                       display: false)
+        panelController.toggle()
     }
 
     // MARK: - About
@@ -95,24 +49,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-// MARK: - About view (minimal)
+// MARK: - About view
 
 private struct AboutView: View {
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 12) {
             Text("side-note")
                 .font(.system(size: 28, weight: .regular, design: .serif))
-            Text("v0.1.0 — M0 scaffolding")
+                .foregroundStyle(.textPrimary)
+
+            Text("v0.1.0 · M1 slide-in spike")
                 .font(.system(size: 13))
-                .foregroundStyle(.secondary)
+                .tracking(0.4)
+                .foregroundStyle(.sage)
+                .textCase(.uppercase)
+
             Text("A Mac sidebar Markdown notebook that slides in from screen edge.")
                 .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.textMuted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
+
+            Text("⌃⇧Space to toggle")
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(.textFaint)
+                .padding(.top, 6)
+
             Spacer()
         }
         .padding(.top, 28)
         .frame(width: 360, height: 240)
+        .background(Color.canvas)
     }
 }
