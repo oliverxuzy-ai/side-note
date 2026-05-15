@@ -75,7 +75,7 @@ struct NoteCard: View {
 
     private var cardBorder: some View {
         RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-            .stroke(hovering ? .hairline.opacity(1.4) : .hairline, lineWidth: 1)
+            .stroke(hovering ? .hairline.opacity(1.4) : .hairline, lineWidth: BorderWidth.hairline)
     }
 
     private func tagChip(_ text: String) -> some View {

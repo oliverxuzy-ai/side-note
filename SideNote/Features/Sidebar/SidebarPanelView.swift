@@ -118,7 +118,7 @@ struct SidebarPanelView: View {
         .background(Color.black.opacity(0.035))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.md - 2, style: .continuous)
-                .stroke(.hairline, lineWidth: 1)
+                .stroke(.hairline, lineWidth: BorderWidth.hairline)
         )
         .clipShape(RoundedRectangle(cornerRadius: Radius.md - 2, style: .continuous))
     }

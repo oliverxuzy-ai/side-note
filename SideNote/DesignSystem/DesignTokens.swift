@@ -98,6 +98,13 @@ enum Radius {
     static let lg: CGFloat = 14  // 设置面板、Sheet、窗口本身
 }
 
+enum BorderWidth {
+    /// 卡片、输入框、容器轮廓。比标准 1pt 略粗，在 glass 背景上更稳定可见。
+    static let hairline: CGFloat = 1.5
+    /// 选中态左侧立柱、强调分隔线
+    static let accent:   CGFloat = 2
+}
+
 enum PanelGeometry {
     /// 用户看到的"侧边栏"的可见宽度
     static let visibleWidth:  CGFloat = 380
