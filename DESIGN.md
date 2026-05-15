@@ -31,19 +31,34 @@
 ### Light Theme（v1 已锁定）
 
 ```
-═══ CANVAS (target visual on neutral desktop) ═══
-canvas             #F1F2E9   /* sage-tinted near-white */
+═══ CANVAS — 3-layer glass composition (M1 升级 from 92% 不透明叠层) ═══
 
-实现：NSVisualEffectView(.contentBackground, .behindWindow)
-      + Color(0xF1F2E9).opacity(0.92)
-      ~ 8% 的桌面壁纸透过来，让 canvas 在不同壁纸下微微呼吸
-      静态视觉目标 = #F1F2E9，材质实现 = vibrancy
+Layer 1 (底)：NSVisualEffectView
+              material: .sidebar          (Finder / Apple Notes / Things 3 侧栏所用)
+              blendingMode: .behindWindow (透到桌面壁纸)
+              state: .active              (失焦不变暗)
 
-═══ SURFACE (cards, lists, inputs) ═══
+Layer 2 (中)：Color #C1C5B0 @ opacity 0.12   /* sage 染色层 */
+              把整体往 sage 方向轻轻拉，不让 App 完全跟着壁纸跑
+
+Layer 3 (上)：Color #FFFEFA @ opacity 0.45   /* 暖白 wash */
+              保证 readability：在极暗壁纸下不至于整个变黑
+
+净可见 ≈ 桌面壁纸 ~50% 透过 + sage tint 12% + 暖白 45%
+体感：和 Apple Notes / Things 3 / Finder 的侧栏同一种"半透明玻璃"语言
+不同桌面差异显著：暗壁纸 → 偏深偏冷；浅壁纸 → 接近 sage 白；彩色壁纸 → 接受染色
+
+设计意图（M1 实测确认）：「肩膀松那一下」不来自一个静态颜色，来自一种
+**"有内容透过来"的物质感**——你眼睛感知到这是一块"和环境相连的玻璃"
+而不是"一个贴在屏幕上的色块"，才会真的松一下。
+
+═══ SURFACE (cards, lists, inputs — 玻璃之上的半透明白卡) ═══
 surface            rgba(255, 255, 255, 0.55)   /* 半透明白卡片 */
 surface-hover      rgba(255, 255, 255, 0.70)
 surface-selected   rgba(255, 255, 255, 0.88)
-（不用纯填色——卡片靠 hairline border + 极轻阴影区分层级）
+（不用纯填色——卡片靠 hairline border + 极轻阴影区分层级。canvas 已是玻璃，
+  填色会让卡片显得"碎"。半透明白卡 = 玻璃之上的"高亮区"，依然能让 vibrancy
+  通过卡片底色微弱透出来，整体保持玻璃连续性。）
 
 ═══ BORDER ═══
 border-hairline    rgba(31, 30, 24, 0.07)   /* 卡片边缘 */
@@ -256,3 +271,5 @@ v1.1 推迟：图片、表格、任务列表、脚注、删除线、嵌套引用
 | 2026-05-14  | Display 字体: PP Editorial New                                       | mood board 里 ISSUE 59 / Kinfolk logo 调性的直接落地，免费个人/商业，比 Tiempos / GT Sectra 经济  |
 | 2026-05-14  | Body 字体: General Sans                                              | Fontshare 免费，与 PP Editorial New 同样独立字体厂感性，比 Inter 暖 + 人文                         |
 | 2026-05-14  | 滑入: 320ms spring + 12pt content parallax 80ms 延迟                | 把面板和内容拆成两层，眼睛感知层次而非位移；spring response 0.32, damping 0.78                     |
+| 2026-05-14  | M1 实测：canvas 从 92% 不透明叠层 → full glass (3-layer composition)  | 用户："没看到像 macOS 原生那样背景颜色会泛上来"。92% 让 vibrancy 几乎不可见，违背"有玻璃感"的初衷    |
+| 2026-05-14  | M1 实测：放弃"NSPanel 滑窗口位置"，改为"NSPanel 固定 + SwiftUI 内部 slide" | 玻璃变明显后窗口移动每帧重算 vibrancy 卡感更刺眼；改成单一 SwiftUI spring 驱动单层 slide，无 NSAnimationContext |

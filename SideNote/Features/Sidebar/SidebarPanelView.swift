@@ -1,42 +1,72 @@
 import SwiftUI
 
-/// M1 · 主侧边栏面板视图。
-///
-/// 三层结构：
-/// 1. NSVisualEffectView 材质（vibrancy）
-/// 2. Color.canvas at 92% opacity（sage tint，让 ~8% 桌面壁纸透过来）
-/// 3. SwiftUI 内容层（search + notes list + new-note button）
-///
-/// 第三层挂在 `controller.isContentPresented` 上 —— 它是 spring + parallax + alpha 的动画触发源。
-/// 时序由 PanelController 拍板：panel 位置开始动 80ms 后，content 才开始动。
-/// 两层不同节奏 = 你眼睛看到的是「层次」而不是「位移」。
-struct SidebarPanelView: View {
+// MARK: - Host (NSPanel 内的顶层 SwiftUI 视图)
 
-    /// `@Bindable` 让 SwiftUI 追踪 @Observable 类的属性变化。
+/// NSPanel 的 contentView 渲染这个 host。它的作用：
+/// - 整体占 panel 全宽 = `PanelGeometry.totalWidth`（visibleWidth + slideBuffer）
+/// - HStack + Spacer 把可见 surface 推到右边
+/// - 通过 `.offset(x:)` 实现 surface 的滑入/滑出
+///
+/// 当 `controller.isPresented = false`：surface offset +slideBuffer → 滑出 panel 右侧
+/// 当 `controller.isPresented = true`：surface offset 0 → 紧贴 panel 右边、完全可见
+///
+/// 关键：整个 surface（包括 vibrancy + tint + wash + 内容）一起 slide。
+/// 单个 SwiftUI spring 时钟，无 NSAnimationContext，无两层时序割裂。
+struct SidebarPanelHost: View {
+
     @Bindable var controller: PanelController
 
     var body: some View {
-        ZStack {
-            // ---- Layer 1: vibrancy 材质 ----
-            VisualEffectBackground()
-
-            // ---- Layer 2: 92% canvas (sage tint) ----
-            Color.canvas.opacity(0.92)
-
-            // ---- Layer 3: 内容（带 parallax + alpha） ----
-            contentLayer
-                .offset(x: controller.isContentPresented ? 0 : PanelGeometry.contentParallax)
-                .opacity(controller.isContentPresented ? 1 : 0)
-                .animation(
-                    controller.isContentPresented ? .slideInContent : .slideOutContent,
-                    value: controller.isContentPresented
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            SidebarPanelView()
+                .frame(
+                    width: PanelGeometry.visibleWidth,
+                    height: PanelGeometry.visibleHeight
                 )
+                // 阴影自己画（SlidePanel 关掉了系统阴影）。x: -6 让阴影偏左 —
+                // 视觉上更像"从屏幕外伸进来的板子"。
+                .shadow(color: .black.opacity(0.25), radius: 22, x: -6, y: 8)
+                .offset(x: controller.isPresented ? 0 : PanelGeometry.slideBuffer)
         }
-        .frame(width: PanelGeometry.width, height: PanelGeometry.height)
+        .frame(
+            width: PanelGeometry.totalWidth,
+            height: PanelGeometry.totalHeight
+        )
+    }
+}
+
+// MARK: - Surface (visible 380×720 sidebar)
+
+/// 可见侧边栏面板。Static 视图，不感知 controller 状态——slide 由外层 Host 通过
+/// offset 驱动。
+///
+/// **3 层玻璃合成**（DESIGN.md M1 升级后）：
+/// 1. NSVisualEffectView (.sidebar, .behindWindow) — 桌面壁纸透过来
+/// 2. sage tint @ 12% — 把 App 往 sage 方向轻微拉
+/// 3. warm white wash @ 45% — 保证 readability
+///
+/// 净可见 ≈ 50% 桌面 + 12% sage + 45% 暖白
+struct SidebarPanelView: View {
+
+    var body: some View {
+        ZStack {
+            // ---- 3-layer glass composition ----
+            VisualEffectBackground(material: .sidebar)
+            Color.glassSageTint.opacity(0.12)
+            Color.glassWarmWash.opacity(0.45)
+
+            // ---- content ----
+            contentLayer
+        }
+        .frame(
+            width: PanelGeometry.visibleWidth,
+            height: PanelGeometry.visibleHeight
+        )
         .clipShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
     }
 
-    // MARK: - Content layer
+    // MARK: - Content
 
     private var contentLayer: some View {
         VStack(spacing: 0) {
@@ -45,21 +75,17 @@ struct SidebarPanelView: View {
                 .padding(.top, 18)
                 .padding(.bottom, 14)
 
-            Divider()
-                .overlay(.faintLine)
+            Divider().overlay(.faintLine)
 
             notesList
 
-            Divider()
-                .overlay(.faintLine)
+            Divider().overlay(.faintLine)
 
             footer
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
         }
     }
-
-    // MARK: - Search bar
 
     private var searchBar: some View {
         HStack(spacing: Spacing.sm) {
@@ -83,8 +109,6 @@ struct SidebarPanelView: View {
         .clipShape(RoundedRectangle(cornerRadius: Radius.md - 2, style: .continuous))
     }
 
-    // MARK: - Notes list
-
     private var notesList: some View {
         ScrollView {
             LazyVStack(spacing: 10) {
@@ -98,8 +122,6 @@ struct SidebarPanelView: View {
         }
         .scrollIndicators(.never)
     }
-
-    // MARK: - Footer
 
     private var footer: some View {
         HStack {
@@ -129,10 +151,15 @@ struct SidebarPanelView: View {
     }
 }
 
-#Preview("Sidebar · M1 (preview only — slide-in invisible in Xcode Preview)") {
-    SidebarPanelView(controller: PanelController())
-        .frame(width: PanelGeometry.width, height: PanelGeometry.height)
-        .onAppear {
-            // Force content visible in Preview (Preview doesn't have NSPanel to trigger it)
-        }
+// MARK: - Preview
+
+#Preview("Sidebar surface (no slide — preview can't host NSPanel)") {
+    SidebarPanelView()
+        .frame(width: PanelGeometry.visibleWidth, height: PanelGeometry.visibleHeight)
+        .background(LinearGradient(
+            colors: [.gray.opacity(0.7), .brown.opacity(0.4)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        ))
+        .padding(40)
 }

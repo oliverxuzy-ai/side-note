@@ -7,9 +7,16 @@ import SwiftUI
 
 extension Color {
 
-    // canvas — sage-tinted near-white。v1 light 主背景。
-    // M1 阶段：实际是 NSVisualEffectView vibrancy 之上的 92% 不透明叠层。
+    // canvas — sage-tinted near-white。保留作为 reference / 静态预览。
+    // 注意：v1 实际渲染走 3-layer glass composition（见 SidebarPanelView），
+    //       不再直接使用这个静态色当背景。
     static let canvas = Color(red: 0xF1 / 255.0, green: 0xF2 / 255.0, blue: 0xE9 / 255.0)
+
+    // ---- Glass canvas composition (v1 light theme, see DESIGN.md) ----
+    // Layer 2 of glass canvas: sage 染色层（@ opacity 0.12 in view）
+    static let glassSageTint = Color(red: 0xC1 / 255.0, green: 0xC5 / 255.0, blue: 0xB0 / 255.0)
+    // Layer 3 of glass canvas: warm white wash（@ opacity 0.45 in view）
+    static let glassWarmWash = Color(red: 0xFF / 255.0, green: 0xFE / 255.0, blue: 0xFA / 255.0)
 
     // text
     static let textPrimary = Color(red: 0x1F / 255.0, green: 0x1E / 255.0, blue: 0x18 / 255.0)
@@ -49,6 +56,8 @@ extension ShapeStyle where Self == Color {
     static var cardFillSelected: Color { Color.cardFillSelected }
     static var hairline: Color         { Color.hairline }
     static var faintLine: Color        { Color.faintLine }
+    static var glassSageTint: Color    { Color.glassSageTint }
+    static var glassWarmWash: Color    { Color.glassWarmWash }
 }
 
 // MARK: - Motion tokens
@@ -57,11 +66,12 @@ extension ShapeStyle where Self == Color {
 
 extension Animation {
 
-    /// Slide-in 内容 parallax spring。0.32s 时长，~0.22 弹性（≈ damping 0.78）。
-    static let slideInContent = Animation.spring(duration: 0.32, bounce: 0.22)
+    /// 北极星滑入动画：单一 spring 驱动整个 panel。0.42s + 0.22 弹性。
+    /// 比之前的 0.32s 略长，配合 full glass 给"软着陆"感觉。
+    static let slideIn = Animation.spring(duration: 0.42, bounce: 0.22)
 
-    /// Slide-out 内容淡出。直接 100ms easeIn。
-    static let slideOutContent = Animation.easeIn(duration: 0.10)
+    /// 滑出：果断离开。无弹性、稍快、ease-in（从静止加速离去）。
+    static let slideOut = Animation.easeIn(duration: 0.22)
 
     /// Hover / 状态切换通用过渡。
     static let hover = Animation.easeOut(duration: 0.16)
@@ -89,9 +99,16 @@ enum Radius {
 }
 
 enum PanelGeometry {
-    static let width:        CGFloat = 380
-    static let height:       CGFloat = 720
-    static let edgeMargin:   CGFloat = 20    // 与屏幕右边的间隙
-    static let contentParallax: CGFloat = 12 // 内容相对面板的滑入位移
-    static let contentDelay: Double = 0.08   // 内容在面板开始动后多久启动
+    /// 用户看到的"侧边栏"的可见宽度
+    static let visibleWidth:  CGFloat = 380
+    static let visibleHeight: CGFloat = 720
+    /// 可见侧边栏与屏幕右边的间隙
+    static let edgeMargin:    CGFloat = 20
+    /// NSPanel 额外的"滑出缓冲区"——SwiftUI 把 surface offset 到这里 = 滑出屏幕外
+    /// 必须 >= visibleWidth 才能让 surface 完全消失出 panel 视野
+    static let slideBuffer:   CGFloat = 420
+
+    /// NSPanel 总宽 = 可见宽 + 滑出缓冲区（用于把 surface 隐藏到 panel 右侧外）
+    static var totalWidth:  CGFloat { visibleWidth + slideBuffer }
+    static var totalHeight: CGFloat { visibleHeight }
 }
