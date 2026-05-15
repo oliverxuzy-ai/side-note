@@ -13,13 +13,15 @@ import SwiftUI
 /// - ⌃⇧Space     → `HotkeyService` 直接调用 `PanelController.toggle()`
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
-    let panelController = PanelController()
+    let noteStore = NoteStore()
+    lazy var panelController = PanelController(store: noteStore)
 
     private var aboutWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        noteStore.bootstrap()
         panelController.bootstrap()
-        NSLog("[side-note] M1 launched. ⌃⇧Space or click menu bar to slide.")
+        NSLog("[side-note] M2 launched. ⌃⇧Space or click menu bar to slide.")
     }
 
     // MARK: - Sidebar

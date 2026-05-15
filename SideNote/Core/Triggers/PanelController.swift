@@ -23,12 +23,17 @@ final class PanelController {
     private var panel: SlidePanel?
     private var hotkey: HotkeyService?
 
+    /// 笔记真相来源。由 AppDelegate 注入，传给 SidebarPanelHost。
+    let store: NoteStore
+
     /// 简单防抖：避免动画进行中重复触发导致状态混乱。
     private var isAnimating = false
 
     // MARK: - Lifecycle
 
-    init() {}
+    init(store: NoteStore) {
+        self.store = store
+    }
 
     func bootstrap() {
         hotkey = HotkeyService { [weak self] in
@@ -60,7 +65,9 @@ final class PanelController {
 
         // 3. 上屏。此时 isPresented = false，surface 还在 offset(+slideBuffer) 位置 = 屏外，
         //    用户视觉上看不到任何内容（panel 区域全透明）。
-        panel.orderFrontRegardless()
+        //    makeKey：nonactivating panel 取得键盘焦点（输入笔记 + ⌘ 快捷键必需），
+        //    但不抢应用激活态。
+        panel.makeKeyAndOrderFront(nil)
 
         // 4. 触发 SwiftUI 动画：isPresented false → true，surface 从屏外 spring 到 in-place
         withAnimation(.slideIn) {
@@ -91,7 +98,7 @@ final class PanelController {
     private func ensurePanel() -> SlidePanel {
         if let panel = panel { return panel }
         let panel = SlidePanel()
-        let host = SidebarPanelHost(controller: self)
+        let host = SidebarPanelHost(controller: self, store: store)
         let hosting = ClickThroughHostingView(rootView: host)
         hosting.frame = NSRect(
             x: 0, y: 0,

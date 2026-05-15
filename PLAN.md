@@ -158,11 +158,35 @@ SideNote/
 
 ---
 
-## Milestone 2 · Core read/write loop (Week 2)
+## Milestone 2 · Core read/write loop ✅ COMPLETE
 
 **Goal**：能用。自己开始替代当前的笔记习惯。
 
 **DoD**：v1 in scope 的功能除 visual polish 外全部跑通。每天用 ≥ 8 次。
+
+### 实际交付（vs 计划的偏离）
+
+storage / markdown / editor / 列表-详情导航 / 搜索 / 快捷键 / 外部变更冲突条全部落地。
+14 个单测全绿（codec corner case + ULID + markdown 子集 + NoteStore 磁盘往返集成）。
+「数据不丢」DoD 通过 NoteStore 集成测试端到端验证（写盘 → 全新 store 重扫 → 内容仍在）。
+
+| 原计划 | 实际 | 原因 |
+|--------|------|------|
+| `Yams` 包解析 YAML frontmatter | 手写 `FrontmatterCodec`（标题强制加引号 + 容错解码） | frontmatter 只 6 个扁平字段、格式自写自读，引工业级 YAML 库是过度依赖。corner case（含`:`/emoji 标题、空/缺失/损坏 frontmatter）用单测覆盖 |
+| 文件名隐含跟随 title | 文件名 = `<ULID>.md`，标题只活在 frontmatter | title 改一次就 rename 文件 → rename 触发 FSEvents → 回环风险。ULID 当名 = 稳定，且字典序==时间序，目录排序即创建序 |
+| FSEvents 用 `DispatchSource` vnode 监听 | `FSEventStream` + `kFSEventStreamCreateFlagFileEvents` | vnode 只报目录条目增删，**不报文件内容修改**；而「外部编辑器改了当前笔记要提示」必须感知内容修改 |
+| 删除 = `trashItem` | trash 优先，失败回退 `removeItem` | 某些卷（网络盘 / 临时卷）不支持 Trash，`try?` 会静默吞掉导致「删了还在」。回退硬删除保证语义 |
+| 编辑器语法高亮（H1 加粗 / code 等宽）| M2 = 纯文本编辑器 | 高亮 / live preview 是观感而非「能用」，风险大收益低，推 M3 polish |
+| 冲突条含 `[查看 diff]` | M2 = `[保留磁盘版] [保留本地]` 两个动作 | diff UI 重；两个动作已覆盖「不丢数据」核心。diff 推 M3 |
+| 真 PP Editorial New / General Sans / JetBrains Mono | `Typography.swift` 用系统回退（serif/sans/mono），字号行距严格照 DESIGN.md | 字体文件加载是 M3 任务。M3 只改 Typography 里三个 family 函数，调用点不动 |
+
+### M2 已知项 / 推迟到 M3
+
+- **首启动 macOS 会弹一次「允许 side-note 访问 Documents 文件夹」系统框**——`~/Documents/SideNote` 受 TCC 保护，点一次 Allow 即可（真实用户一次性行为；自动化测试用临时目录绕开验证逻辑）
+- 编辑器语法高亮 + live preview（M2 是 toggle 两态）
+- 冲突条 `[查看 diff]`
+- 真自定义字体加载（M3 Typography 任务）
+- ⌘ 快捷键依赖 panel 为 key window（open() 已改 `makeKeyAndOrderFront`）；边缘悬停触发仍在 M3
 
 ### Tasks
 

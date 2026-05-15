@@ -3,40 +3,44 @@ import SwiftUI
 /// 单条笔记卡片视图。严格照 DESIGN.md 规格。
 ///
 /// 状态：
-/// - normal: cardFill 半透明白底 + 1px hairline
+/// - normal: cardFill 半透明白底 + hairline
 /// - hover: cardFillHover + border 略深（120ms ease-out）
-/// - selected: cardFillSelected + 左侧 2pt sage 立柱（inset shadow）
+/// - selected: cardFillSelected + 左侧 2pt sage 立柱
 /// - pinned: 顶部左侧伸出一个 sage ceramic 图钉
 struct NoteCard: View {
 
-    let note: MockNote
+    let note: NoteFile
+    var selected: Bool = false
 
     @State private var hovering = false
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            // ---- 卡片主体 ----
             VStack(alignment: .leading, spacing: 6) {
-                Text(note.title)
-                    .font(.system(size: 16, weight: .regular, design: .serif))
+                Text(note.displayTitle)
+                    .font(Typography.h3)
                     .foregroundStyle(.textPrimary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                     .tracking(-0.1)
 
-                Text(note.preview)
-                    .font(.system(size: 12.5))
-                    .foregroundStyle(.textMuted)
-                    .lineLimit(2)
-                    .lineSpacing(2)
+                if !note.preview.isEmpty {
+                    Text(note.preview)
+                        .font(Typography.listItem)
+                        .foregroundStyle(.textMuted)
+                        .lineLimit(2)
+                        .lineSpacing(2)
+                }
 
                 HStack(spacing: Spacing.sm) {
-                    tagChip(note.tag)
-                    Circle()
-                        .fill(.textFaint)
-                        .frame(width: 3, height: 3)
-                    Text(note.timestamp)
-                        .font(.system(size: 11))
+                    if let tag = note.tags.first {
+                        tagChip(tag)
+                        Circle()
+                            .fill(.textFaint)
+                            .frame(width: 3, height: 3)
+                    }
+                    Text(note.relativeTimestamp)
+                        .font(Typography.meta)
                         .tracking(0.2)
                         .foregroundStyle(.textFaint)
                 }
@@ -48,7 +52,7 @@ struct NoteCard: View {
             .background(cardBackground)
             .overlay(cardBorder)
             .overlay(alignment: .leading) {
-                if note.selected {
+                if selected {
                     Rectangle()
                         .fill(.sage)
                         .frame(width: 2)
@@ -59,7 +63,6 @@ struct NoteCard: View {
             .onHover { hovering = $0 }
             .animation(.hover, value: hovering)
 
-            // ---- 置顶图钉 ----
             if note.pinned {
                 CeramicPin()
                     .offset(x: 14, y: -4)
@@ -68,8 +71,8 @@ struct NoteCard: View {
     }
 
     private var cardBackground: Color {
-        if note.selected { return .cardFillSelected }
-        if hovering      { return .cardFillHover    }
+        if selected { return .cardFillSelected }
+        if hovering  { return .cardFillHover    }
         return .cardFill
     }
 
@@ -98,7 +101,6 @@ struct NoteCard: View {
 struct CeramicPin: View {
     var body: some View {
         ZStack(alignment: .top) {
-            // 针
             Rectangle()
                 .fill(LinearGradient(
                     colors: [.sageDeep, .sage, .clear],
@@ -108,7 +110,6 @@ struct CeramicPin: View {
                 .frame(width: 2, height: 16)
                 .offset(y: 10)
 
-            // 头
             RoundedRectangle(cornerRadius: 5, style: .continuous)
                 .fill(LinearGradient(
                     colors: [.sageDeep, .sage, .sageSoft, .sage],
@@ -117,7 +118,6 @@ struct CeramicPin: View {
                 ))
                 .frame(width: 12, height: 18)
                 .overlay(
-                    // 顶部高光
                     Capsule()
                         .fill(Color.white.opacity(0.30))
                         .frame(width: 5, height: 2)

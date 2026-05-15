@@ -15,11 +15,13 @@ import SwiftUI
 struct SidebarPanelHost: View {
 
     @Bindable var controller: PanelController
+    let store: NoteStore
 
     var body: some View {
         HStack(spacing: 0) {
             Spacer(minLength: 0)
             SidebarPanelView()
+                .environment(store)
                 .frame(
                     width: PanelGeometry.visibleWidth,
                     height: PanelGeometry.visibleHeight
@@ -30,14 +32,9 @@ struct SidebarPanelHost: View {
                         .stroke(Color.black.opacity(0.18), lineWidth: 1)
                 }
                 // ---- 阴影：三层堆叠，模拟自然光照 ----
-                // 单层 shadow 在边缘 alpha 突变 → 用户能看到一条"shadow 到这里就停了"的线。
-                // 三层叠加：contact（接触硬阴影）+ mid（中距）+ ambient（远柔光），
-                // 不同尺度的高斯衰减累积 → 整体呈现自然平滑的 falloff，无视觉边界。
-                // 参考：Material Design elevation / Linear / macOS NSPanel.hasShadow 的多层做法。
                 .shadow(color: .black.opacity(0.06), radius: 3,  x: 0, y: 1)   // contact
                 .shadow(color: .black.opacity(0.10), radius: 9,  x: 0, y: 3)   // mid
                 .shadow(color: .black.opacity(0.18), radius: 22, x: 0, y: 8)   // ambient
-                // 右侧 padding 让 surface 不贴在 HStack 右边 —— 留出 30pt 给 shadow 渲染
                 .padding(.trailing, PanelGeometry.shadowMargin)
                 .offset(x: controller.isPresented ? 0 : PanelGeometry.slideBuffer)
         }
@@ -50,38 +47,28 @@ struct SidebarPanelHost: View {
 
 // MARK: - Surface (visible 380×720 sidebar)
 
-/// 可见侧边栏面板。Static 视图，不感知 controller 状态——slide 由外层 Host 通过
-/// offset 驱动。
-///
-/// **3 层玻璃合成**（DESIGN.md M1 升级后）：
-/// 1. NSVisualEffectView (.sidebar, .behindWindow) — 桌面壁纸透过来
-/// 2. sage tint @ 12% — 把 App 往 sage 方向轻微拉
-/// 3. warm white wash @ 45% — 保证 readability
-///
-/// 净可见 ≈ 50% 桌面 + 12% sage + 45% 暖白
+/// 可见侧边栏面板。3 层玻璃合成（DESIGN.md），内容由 `NoteStore` 驱动。
+/// 单列导航：列表 ↔ 详情同区域切换。
 struct SidebarPanelView: View {
+
+    @Environment(NoteStore.self) private var store
+
+    @State private var query = ""
+    @State private var selectedID: ULID?
+    @FocusState private var searchFocused: Bool
 
     var body: some View {
         ZStack {
             // ---- Layer 1: SwiftUI 原生玻璃材质 ----
-            // 用 SwiftUI 的 .regularMaterial (macOS 12+)，不是 NSVisualEffectView
-            // 包装。SwiftUI 自己管 vibrancy 合成，无 .shadow/clipShape 兼容性 bug。
-            // Material 等级：.ultraThinMaterial < .thinMaterial < .regularMaterial
-            // < .thickMaterial < .ultraThickMaterial。Finder/Notes 侧栏体感 ≈ regular。
             Rectangle().fill(.regularMaterial)
-
             // ---- Layer 2: sage 染色层（10%）----
-            // .regularMaterial 本身已经把 App 拉得很接近 Mac 系统色（中性灰白），
-            // 这层把它往 sage 方向拉一点点，保住品牌身份。
             Color.glassSageTint.opacity(0.10)
-
             // ---- Layer 3: 暖白 wash（20%）----
-            // 比之前 45% 大幅降低 —— material 本身玻璃感强，wash 厚了会盖死 vibrancy。
-            // 20% 是"可读 + 仍能感受到桌面颜色"的平衡点。
             Color.glassWarmWash.opacity(0.20)
 
-            // ---- content ----
-            contentLayer
+            content
+
+            shortcutLayer
         }
         .frame(
             width: PanelGeometry.visibleWidth,
@@ -92,7 +79,16 @@ struct SidebarPanelView: View {
 
     // MARK: - Content
 
-    private var contentLayer: some View {
+    @ViewBuilder
+    private var content: some View {
+        if let id = selectedID, store.note(id: id) != nil {
+            NoteDetailView(noteID: id) { selectedID = nil }
+        } else {
+            listScreen
+        }
+    }
+
+    private var listScreen: some View {
         VStack(spacing: 0) {
             searchBar
                 .padding(.horizontal, Spacing.lg)
@@ -101,7 +97,9 @@ struct SidebarPanelView: View {
 
             Divider().overlay(.faintLine)
 
-            notesList
+            NoteListView(notes: store.filtered(query)) { note in
+                selectedID = note.id
+            }
 
             Divider().overlay(.faintLine)
 
@@ -117,11 +115,20 @@ struct SidebarPanelView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.textMuted)
 
-            Text("Search notes…")
+            TextField("Search notes…", text: $query)
+                .textFieldStyle(.plain)
                 .font(.system(size: 13))
-                .foregroundStyle(.textFaint)
+                .foregroundStyle(.textPrimary)
+                .focused($searchFocused)
 
-            Spacer()
+            if !query.isEmpty {
+                Button { query = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.textFaint)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -133,28 +140,14 @@ struct SidebarPanelView: View {
         .clipShape(RoundedRectangle(cornerRadius: Radius.md - 2, style: .continuous))
     }
 
-    private var notesList: some View {
-        ScrollView {
-            LazyVStack(spacing: 10) {
-                ForEach(MockNote.samples) { note in
-                    NoteCard(note: note)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 16)
-        }
-        .scrollIndicators(.never)
-    }
-
     private var footer: some View {
         HStack {
-            Button(action: {}) {
+            Button(action: newNote) {
                 HStack(spacing: 4) {
                     Image(systemName: "plus")
                         .font(.system(size: 14, weight: .regular))
                     Text("New note")
-                        .font(.system(size: 12.5, weight: .medium))
+                        .font(Typography.button)
                 }
                 .foregroundStyle(Color.white)
                 .padding(.horizontal, 14)
@@ -167,23 +160,48 @@ struct SidebarPanelView: View {
 
             Spacer()
 
-            Text("\(MockNote.samples.count) notes · \(MockNote.samples.filter(\.pinned).count) pinned")
-                .font(.system(size: 11))
+            Text("\(store.notes.count) notes · \(store.notes.filter(\.pinned).count) pinned")
+                .font(Typography.meta)
                 .tracking(0.4)
                 .foregroundStyle(.textFaint)
         }
     }
-}
 
-// MARK: - Preview
+    // MARK: - Shortcuts
 
-#Preview("Sidebar surface (no slide — preview can't host NSPanel)") {
-    SidebarPanelView()
-        .frame(width: PanelGeometry.visibleWidth, height: PanelGeometry.visibleHeight)
-        .background(LinearGradient(
-            colors: [.gray.opacity(0.7), .brown.opacity(0.4)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        ))
-        .padding(40)
+    /// ⌘N 新建 / ⌘F 搜索 / ⌘P pin / ⌘⌫ 删除。藏在 0 尺寸层里靠 keyboardShortcut 触发。
+    private var shortcutLayer: some View {
+        ZStack {
+            Button(action: newNote) { }
+                .keyboardShortcut("n", modifiers: .command)
+            Button { selectedID = nil; searchFocused = true } label: { }
+                .keyboardShortcut("f", modifiers: .command)
+            Button(action: togglePinSelected) { }
+                .keyboardShortcut("p", modifiers: .command)
+            Button(action: deleteSelected) { }
+                .keyboardShortcut(.delete, modifiers: .command)
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
+    }
+
+    // MARK: - Actions
+
+    private func newNote() {
+        let note = store.create()
+        query = ""
+        selectedID = note.id
+    }
+
+    private func togglePinSelected() {
+        guard let id = selectedID, let n = store.note(id: id) else { return }
+        store.togglePin(n)
+    }
+
+    private func deleteSelected() {
+        guard let id = selectedID, let n = store.note(id: id) else { return }
+        store.delete(n)
+        selectedID = nil
+    }
 }
