@@ -24,9 +24,11 @@ struct SidebarPanelHost: View {
                     width: PanelGeometry.visibleWidth,
                     height: PanelGeometry.visibleHeight
                 )
-                // 阴影自己画（SlidePanel 关掉了系统阴影）。x: -6 让阴影偏左 —
-                // 视觉上更像"从屏幕外伸进来的板子"。
-                .shadow(color: .black.opacity(0.25), radius: 22, x: -6, y: 8)
+                // NOTE: 不要在这里加 SwiftUI `.shadow`。`.shadow` 会让 SwiftUI 把整个
+                // view 栅格化成静态位图来算阴影 —— 这会把里面的 NSVisualEffectView
+                // 冻成一张快照（=毛玻璃失活）。阴影会在 M3 polish 时通过 CALayer
+                // 级别的方式加回来（PanelController 里给 hosting view 的 layer
+                // 设置 shadowOpacity/Radius/Offset，那是 GPU 渲染、不栅格化）。
                 .offset(x: controller.isPresented ? 0 : PanelGeometry.slideBuffer)
         }
         .frame(
