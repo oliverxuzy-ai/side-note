@@ -284,4 +284,4 @@ v1.1 推迟：图片、表格、脚注、删除线、嵌套引用、HTML 块。
 | 2026-05-16  | 任务列表纳入 v1 子集（原 v1.1 推迟）；bullet/checkbox 用自定义 `NSLayoutManager` 原位画图形 | 用户要 Bear 式 live editing 的列表/待办观感。底层字符不动（标记设 `.clear` 占位，drawGlyphs 画 •/☐/☑）→ 光标/撤销不受影响；复选框可点击翻转 `[ ]`↔`[x]` |
 | 2026-05-16  | 卡片右滑 pin / 左滑删除；删除背景 = text-primary 近黑（**不是红**） | 用户要 Mail/Bear 式滑动操作。手写（不引库，保持零多余依赖 + 完全控制手感）。破坏性色若用红会破坏 sage 单色锁——改用既有 #1F1E18 近黑 + trash 图标传达 |
 | 2026-05-16  | 滑动手势：触控板双指走 `scrollWheel`，鼠标拖走 `NSPanGestureRecognizer` | 用户指出没适配触控板。AppKit `NSPanGestureRecognizer` **不识别** scroll 事件（UIKit 的 `allowedScrollTypesMask` 在 macOS 不存在）；双指横扫必须自定义 `scrollWheel(with:)`（precise deltas + phase），竖向 super 放行给列表滚动 |
-| 2026-05-16  | NoteCard 版式按用户截图重做：大粗标题 → 多行灰预览 → 底部 pin+时间 | 用户给 Bear 截图要求照做。删掉浮动 CeramicPin + tag-chip-dot 行；pin 改为底部小 sage 图标（仅置顶显示）。**不做图片缩略图**——v1 无图片附件（DESIGN.md 图片仍 v1.1） |
+| 2026-05-16  | NoteCard 试 Bear 版式后**用户要求全回退**，只保留：浮动 CeramicPin → 左下角小 sage 图钉 icon | 用户："卡片重做的全部回退…只把浮动陶瓷图钉删掉，改成左下角一个小的图钉 icon"。原版式（serif 标题 + tag-chip-dot 行 + 选中立柱）原样保留；CeramicPin struct 删除（无引用）。图片缩略图仍 v1.1 |
