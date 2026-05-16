@@ -25,3 +25,6 @@ Packages/
 .env
 .env.local
 secrets.json
+
+# Local-only change log (auto-appended by .git/hooks/pre-push)
+changes.md
