@@ -42,6 +42,14 @@ jobs:
         if: steps.ver.outputs.should_release != 'true'
         run: echo "No feat/fix commits since the last tag — skipping."
 
+      # xcodegen emits the Xcode 16+ pbxproj format (objectVersion 77); the
+      # runner's default Xcode 15.4 can't open it. Pin to latest stable.
+      - name: Select Xcode
+        if: steps.ver.outputs.should_release == 'true'
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Install tooling
         if: steps.ver.outputs.should_release == 'true'
         run: brew install xcodegen create-dmg
