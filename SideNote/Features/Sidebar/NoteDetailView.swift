@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// 选中一条笔记后的详情：标题 + 查看/编辑两态切换 + 外部变更冲突条。
+/// 选中一条笔记后的详情：标题 + Bear 风格 live 编辑 + 外部变更冲突条。
 ///
-/// 单列导航（DESIGN.md Open Question #3 v1 倾向单列）：列表 ↔ 详情同区域切换，
-/// 不做双栏。draft 是编辑缓冲，store 是真相；改动走 scheduleSave 防抖落盘。
+/// 无 view/edit 切换——`LiveMarkdownEditor` 输入即渲染。
+/// 单列导航（DESIGN.md Open Question #3 v1 倾向单列）：列表 ↔ 详情同区域切换。
+/// draft 是编辑缓冲，store 是真相；改动走 scheduleSave 防抖落盘。
 struct NoteDetailView: View {
 
     @Environment(NoteStore.self) private var store
@@ -12,7 +13,6 @@ struct NoteDetailView: View {
     let onBack: () -> Void
 
     @State private var draft: NoteFile?
-    @State private var editing = false
     @State private var pinScale: CGFloat = 1.0
 
     var body: some View {
@@ -23,8 +23,8 @@ struct NoteDetailView: View {
                 conflictBanner
             }
 
-            if let d = draft {
-                bodyArea(d)
+            if draft != nil {
+                bodyArea
             } else {
                 Spacer()
                 Text("Note not found")
@@ -33,6 +33,7 @@ struct NoteDetailView: View {
                 Spacer()
             }
         }
+        .animation(.viewSwap, value: store.externallyModifiedIDs.contains(noteID))
         .onAppear {
             draft = store.note(id: noteID)
             store.editingID = noteID
@@ -52,7 +53,7 @@ struct NoteDetailView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.textMuted)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressableButtonStyle())
 
             TextField("Title", text: titleBinding)
                 .textFieldStyle(.plain)
@@ -72,14 +73,7 @@ struct NoteDetailView: View {
                     .foregroundStyle((draft?.pinned ?? false) ? .sage : .textFaint)
                     .scaleEffect(pinScale)
             }
-            .buttonStyle(.plain)
-
-            Button { editing.toggle() } label: {
-                Image(systemName: editing ? "eye" : "pencil")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.textMuted)
-            }
-            .buttonStyle(.plain)
+            .buttonStyle(PressableButtonStyle())
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, 18)
@@ -89,21 +83,12 @@ struct NoteDetailView: View {
     // MARK: - Body
 
     @ViewBuilder
-    private func bodyArea(_ d: NoteFile) -> some View {
+    private var bodyArea: some View {
         Divider().overlay(.faintLine)
 
-        if editing {
-            MarkdownEditor(text: bodyBinding)
-                .padding(.horizontal, Spacing.lg)
-                .padding(.vertical, 16)
-        } else {
-            ScrollView {
-                MarkdownView(markdown: d.body)
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.vertical, 18)
-            }
-            .scrollIndicators(.never)
-        }
+        LiveMarkdownEditor(text: bodyBinding)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, 16)
     }
 
     // MARK: - Conflict banner (DESIGN.md: 外部变更提示)
@@ -129,10 +114,11 @@ struct NoteDetailView: View {
             .font(Typography.button)
             .foregroundStyle(.textMuted)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableButtonStyle())
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, 10)
         .background(Color.sageSoft.opacity(0.22))
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 
     // MARK: - Bindings

@@ -386,6 +386,23 @@ release notes 见仓库 release 草稿。
 
 ---
 
+## Post-v0.1.0 · 用户实测反馈迭代（2026-05-16）
+
+DMG 通过；用户实测后指出两个核心差距（已落地，详见 DESIGN.md 决策日志）：
+
+1. **Live editing**：去掉 view/edit 两态切换 → Bear 风格单视图即时上样式
+   （标记保留但变淡）。新 `LiveMarkdownEditor`（NSTextView + NSTextStorageDelegate
+   + 行/行内正则）。删除旧 `MarkdownEditor`/`MarkdownRenderer`，移除 `swift-markdown`
+   依赖。16 单测全绿（含 4 个新正则 tokenization 测试）。
+2. **微交互**：`PressableButtonStyle`（spring 0.97 回弹）/ `SagePrimaryButtonStyle`
+   / `hoverLift` / 搜索框聚焦环 / 列表⇄详情 spring 转场 / 冲突条滑入。
+   坚持 DESIGN.md：**不加** loading shimmer/spinner（本地 IO 瞬时，装饰性 motion
+   违背设计原则）——已与用户说明此张力。
+
+待用户：PP Editorial New 字体 + demo 视频仍未补；补字体后重切 .dmg 替换 draft。
+
+---
+
 ## 进度跟踪建议
 
 - 每个 milestone 结束写一段 200 字的"实际 vs 计划"小结，提交到 `~/.gstack/projects/side-note/retro-week-N.md`

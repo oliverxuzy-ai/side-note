@@ -219,7 +219,12 @@ t=0→220ms     面板 easeIn 收走
 
 ## Markdown 渲染（v1 子集，8 类）
 
-由 `swift-markdown` 拿 AST，自写渲染层。
+**Live inline editing（Bear 风格，无 view/edit 切换）**：单一始终可编辑的
+NSTextView，输入即上样式。标记符（`#` `**` `` ` `` `>` `[]()`）**保留但变淡**
+（text-faint），不隐藏——所见即所改，光标/选区/撤销不被打断。
+
+实现用按行 + 行内正则即时上属性（只改属性不改字符），对半成品 markdown 鲁棒，
+比 AST 重解析快。不再依赖 `swift-markdown`。
 
 v1 支持：标题（H1-H3）/ 段落 / 无序列表 / 有序列表 / 行内 code / 代码块 / 引用块 / 粗体 & 斜体 / 链接。
 
@@ -271,3 +276,6 @@ v1.1 推迟：图片、表格、任务列表、脚注、删除线、嵌套引用
 | 2026-05-14  | M1 实测：放弃"NSPanel 滑窗口位置"，改为"NSPanel 固定 + SwiftUI 内部 slide" | 玻璃变明显后窗口移动每帧重算 vibrancy 卡感更刺眼；改成单一 SwiftUI spring 驱动单层 slide，无 NSAnimationContext |
 | 2026-05-14  | 移除 SwiftUI `.shadow` 修饰符（暂时无阴影）                            | `.shadow` 把整个面板栅格化成位图算阴影，导致 NSVisualEffectView 的活体毛玻璃被冻成快照。阴影留到 M3 polish 用 CALayer 级别加回 |
 | 2026-05-14  | NSVisualEffectView → SwiftUI `.regularMaterial`（macOS 12+ 原生 API） | 参考 Deck 开源项目的实现。NSVisualEffectView 通过 NSViewRepresentable 包装进 SwiftUI 时各种兼容性 bug（透明度、clipShape、shadow 都易出问题）；SwiftUI 原生 Material 是 ShapeStyle，无包装层，Apple 官方推荐 |
+| 2026-05-16  | 用户实测后：view/edit 两态切换 → **Bear 风格 live inline 编辑**          | 用户："没有 live editing… 像 Bear 那样不需要切换"。模式切换打断书写心流，违背"肩膀松"。改为标记保留但变淡的即时上样式 |
+| 2026-05-16  | `swift-markdown` AST 渲染层 → 按行+行内**正则即时高亮**，移除该依赖      | live 编辑要对半成品 markdown 鲁棒且不卡；只改属性不改字符 → 选区/撤销天然不断。AST 重解析在每次按键下过重，且渲染层删除后该依赖成孤儿 |
+| 2026-05-16  | M3+ 微交互不达标 → 统一 PressableButtonStyle / hover 抬升 / 列表⇄详情 spring 转场 | 用户："动画效果都非常一般"。这是"设计即品牌"北极星本身。坚持 DESIGN.md：只投有意义状态变化，**不加** loading shimmer/spinner（本地 IO 瞬时） |

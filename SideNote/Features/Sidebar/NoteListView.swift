@@ -17,7 +17,8 @@ struct NoteListView: View {
                         Button { onSelect(note) } label: {
                             NoteCard(note: note)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressableButtonStyle(scale: 0.985))
+                        .hoverLift()
                     }
                 }
             }

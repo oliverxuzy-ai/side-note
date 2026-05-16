@@ -81,10 +81,19 @@ struct SidebarPanelView: View {
 
     @ViewBuilder
     private var content: some View {
-        if let id = selectedID, store.note(id: id) != nil {
-            NoteDetailView(noteID: id) { selectedID = nil }
-        } else {
-            listScreen
+        ZStack {
+            if let id = selectedID, store.note(id: id) != nil {
+                NoteDetailView(noteID: id) {
+                    withAnimation(.viewSwap) { selectedID = nil }
+                }
+                .transition(.asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .trailing).combined(with: .opacity)
+                ))
+            } else {
+                listScreen
+                    .transition(.opacity)
+            }
         }
     }
 
@@ -98,7 +107,7 @@ struct SidebarPanelView: View {
             Divider().overlay(.faintLine)
 
             NoteListView(notes: store.filtered(query)) { note in
-                selectedID = note.id
+                withAnimation(.viewSwap) { selectedID = note.id }
             }
 
             Divider().overlay(.faintLine)
@@ -122,22 +131,27 @@ struct SidebarPanelView: View {
                 .focused($searchFocused)
 
             if !query.isEmpty {
-                Button { query = "" } label: {
+                Button { withAnimation(.cardState) { query = "" } } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 12))
                         .foregroundStyle(.textFaint)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableButtonStyle())
+                .transition(.scale.combined(with: .opacity))
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color.black.opacity(0.035))
+        .background(Color.black.opacity(searchFocused ? 0.02 : 0.035))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.md - 2, style: .continuous)
-                .stroke(.hairline, lineWidth: BorderWidth.hairline)
+                .stroke(searchFocused ? Color.sage.opacity(0.55) : Color.hairline,
+                        lineWidth: searchFocused ? 1.5 : BorderWidth.hairline)
         )
         .clipShape(RoundedRectangle(cornerRadius: Radius.md - 2, style: .continuous))
+        .shadow(color: Color.sage.opacity(searchFocused ? 0.16 : 0),
+                radius: searchFocused ? 5 : 0)
+        .animation(.cardState, value: searchFocused)
     }
 
     private var footer: some View {
@@ -156,7 +170,7 @@ struct SidebarPanelView: View {
                 .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
                 .shadow(color: .black.opacity(0.12), radius: 1, y: 1)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SagePrimaryButtonStyle())
 
             Spacer()
 
@@ -191,7 +205,7 @@ struct SidebarPanelView: View {
     private func newNote() {
         let note = store.create()
         query = ""
-        selectedID = note.id
+        withAnimation(.viewSwap) { selectedID = note.id }
     }
 
     private func togglePinSelected() {
@@ -202,6 +216,6 @@ struct SidebarPanelView: View {
     private func deleteSelected() {
         guard let id = selectedID, let n = store.note(id: id) else { return }
         store.delete(n)
-        selectedID = nil
+        withAnimation(.viewSwap) { selectedID = nil }
     }
 }

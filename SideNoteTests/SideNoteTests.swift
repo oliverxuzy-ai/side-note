@@ -1,5 +1,4 @@
 import XCTest
-import Markdown
 @testable import SideNote
 
 /// M2 tests — storage 正确性是「数据不丢」DoD 的底线，重点覆盖 PLAN.md
@@ -101,42 +100,43 @@ final class SideNoteTests: XCTestCase {
         XCTAssertFalse(decoded.body.isEmpty)
     }
 
-    // MARK: - Markdown subset parses
+    // MARK: - Live editor tokenization
 
-    func testEightSupportedBlockKindsParse() {
-        let md = """
-        # H1
-        ## H2
-        ### H3
-
-        A paragraph with **bold**, *italic*, `code` and [a link](https://example.com).
-
-        - bullet one
-        - bullet two
-
-        1. first
-        2. second
-
-        > a quote
-
-        ```
-        let x = 1
-        ```
-        """
-        let doc = Document(parsing: md)
-        let kinds = doc.blockChildren.map { String(describing: type(of: $0)) }
-        XCTAssertTrue(kinds.contains("Heading"))
-        XCTAssertTrue(kinds.contains("Paragraph"))
-        XCTAssertTrue(kinds.contains("UnorderedList"))
-        XCTAssertTrue(kinds.contains("OrderedList"))
-        XCTAssertTrue(kinds.contains("BlockQuote"))
-        XCTAssertTrue(kinds.contains("CodeBlock"))
+    private func cap1(_ re: NSRegularExpression, _ s: String) -> String? {
+        let ns = s as NSString
+        guard let m = re.firstMatch(in: s, range: NSRange(location: 0, length: ns.length)),
+              m.numberOfRanges >= 2 else { return nil }
+        return ns.substring(with: m.range(at: 1))
     }
 
-    func testUnsupportedSyntaxDoesNotCrashAndKeepsText() {
-        // 表格不在 v1 子集，渲染层会原样显示 format()——这里只验证解析不丢内容
-        let md = "| a | b |\n|---|---|\n| 1 | 2 |"
-        let doc = Document(parsing: md)
-        XCTAssertFalse(doc.format().isEmpty)
+    func testInlineRegexesCaptureContent() {
+        typealias C = LiveMarkdownEditor.Coordinator
+        XCTAssertEqual(cap1(C.bold,   "say **hello** now"), "hello")
+        XCTAssertEqual(cap1(C.code,   "use `swift` here"),  "swift")
+        XCTAssertEqual(cap1(C.italic, "an _emphasis_ word"), "emphasis")
+        XCTAssertEqual(cap1(C.italic, "an *emphasis* word"), "emphasis")
+        XCTAssertEqual(cap1(C.link,   "see [docs](https://x.com)"), "docs")
+    }
+
+    func testBoldNotMisreadAsItalic() {
+        // **x** 不应被单星斜体规则吃掉
+        XCTAssertNil(cap1(LiveMarkdownEditor.Coordinator.italic, "**bold**"))
+        XCTAssertEqual(cap1(LiveMarkdownEditor.Coordinator.bold, "**bold**"), "bold")
+    }
+
+    func testHeadingMatchesByLevel() {
+        let h = LiveMarkdownEditor.Coordinator.heading
+        for s in ["# Title", "## Sub", "### Deep"] {
+            XCTAssertNotNil(h.firstMatch(in: s, range: NSRange(location: 0, length: (s as NSString).length)))
+        }
+        let none = "#notspace"
+        XCTAssertNil(h.firstMatch(in: none, range: NSRange(location: 0, length: (none as NSString).length)))
+    }
+
+    func testHalfTypedMarkdownDoesNotMatch() {
+        // live editing 输入到一半不能误上样式 / 不能崩
+        XCTAssertNil(cap1(LiveMarkdownEditor.Coordinator.bold, "**unterminated"))
+        XCTAssertNil(cap1(LiveMarkdownEditor.Coordinator.code, "`open only"))
+        XCTAssertNil(cap1(LiveMarkdownEditor.Coordinator.link, "[label](no-close"))
     }
 }

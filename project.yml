@@ -12,9 +12,6 @@ packages:
   HotKey:
     url: https://github.com/soffes/HotKey
     from: "0.2.0"
-  swift-markdown:
-    url: https://github.com/apple/swift-markdown
-    branch: main
 
 targets:
   SideNote:
@@ -25,8 +22,6 @@ targets:
       - path: SideNote
     dependencies:
       - package: HotKey
-      - package: swift-markdown
-        product: Markdown
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.oliverxuzy.side-note
@@ -54,8 +49,6 @@ targets:
       - path: SideNoteTests
     dependencies:
       - target: SideNote
-      - package: swift-markdown
-        product: Markdown
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.oliverxuzy.side-note.tests

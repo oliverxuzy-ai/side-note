@@ -80,6 +80,9 @@ extension Animation {
     /// 比通用 hover(160ms) 略快——卡片要"跟手"。
     static let cardState = Animation.easeOut(duration: 0.12)
 
+    /// 列表 ↔ 详情切换。比北极星轻（不是主秀），但要有方向感，spring 收尾不生硬。
+    static let viewSwap = Animation.spring(duration: 0.34, bounce: 0.14)
+
     /// 按钮按下、图钉触发等微反馈。DESIGN.md：图钉按下 spring-fast 0.96→1.0。
     static let pressFeedback = Animation.spring(duration: 0.18, bounce: 0.14)
 }
