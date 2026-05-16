@@ -40,21 +40,25 @@ struct SwipeableCard: View {
 
     private var actionLayer: some View {
         HStack(spacing: 0) {
-            actionTile(
-                icon: note.pinned ? "pin.slash.fill" : "pin.fill",
-                label: note.pinned ? "Unpin" : "Pin",
-                tint: Color.sage,
-                width: max(offset, 0),
-                progress: min(1, max(offset, 0) / commit)
-            )
+            if offset > 0.5 {
+                actionTile(
+                    icon: note.pinned ? "pin.slash.fill" : "pin.fill",
+                    label: note.pinned ? "Unpin" : "Pin",
+                    tint: Color.sage,
+                    width: offset,
+                    progress: min(1, offset / commit)
+                )
+            }
             Spacer(minLength: 0)
-            actionTile(
-                icon: "trash.fill",
-                label: "Delete",
-                tint: Color.textPrimary,
-                width: max(-offset, 0),
-                progress: min(1, max(-offset, 0) / commit)
-            )
+            if offset < -0.5 {
+                actionTile(
+                    icon: "trash.fill",
+                    label: "Delete",
+                    tint: Color.textPrimary,
+                    width: -offset,
+                    progress: min(1, -offset / commit)
+                )
+            }
         }
         .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
     }
@@ -72,6 +76,7 @@ struct SwipeableCard: View {
             .opacity(Double(progress))
         }
         .frame(width: width)
+        .clipped()
     }
 
     private func fire(pin: Bool) {
