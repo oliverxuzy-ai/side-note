@@ -1,7 +1,8 @@
 #!/bin/sh
 #
-# One-command local release: bump VERSION, sync project, build a signed-to-run
-# .dmg (route A ad-hoc, per HANDOFF), and create the annotated git tag.
+# LOCAL .dmg build helper: bump VERSION, sync project, build a signed-to-run
+# .dmg (route A ad-hoc, per HANDOFF), and create the annotated git tag — all
+# on your machine, for testing the packaged app.
 #
 # Usage:
 #   scripts/release.sh patch      # 0.1.0 -> 0.1.1
@@ -9,9 +10,11 @@
 #   scripts/release.sh major      # 0.1.0 -> 1.0.0
 #   scripts/release.sh 0.4.2      # explicit version
 #
-# Does NOT git-push and does NOT publish a GitHub release — pushing the tag is
-# a deliberate human step (the GitHub Action then builds + attaches the .dmg as
-# a DRAFT; the owner publishes). This keeps the visible action in your hands.
+# NOTE: production releases are now automatic — every push to main runs
+# .github/workflows/release.yml, which derives the version from commits
+# (feat → minor, fix → patch; major is manual via "Run workflow") and
+# publishes a PUBLIC release with the .dmg. You normally do NOT need this
+# script; it's only for building/inspecting a .dmg locally. It does not push.
 
 set -eu
 

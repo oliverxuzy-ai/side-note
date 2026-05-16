@@ -1,50 +1,70 @@
 name: Release
 
-# Push a tag like v0.2.0 (scripts/release.sh creates it) → this builds the
-# .dmg and attaches it to a DRAFT GitHub release. The owner reviews and
-# publishes manually — CI never publishes unilaterally.
+# Every push to main: derive the next version from conventional commits since
+# the last tag (feat → minor, fix → patch), build the .dmg, and publish a
+# PUBLIC "Latest" GitHub release. Pushes with no feat/fix commit make no
+# release. A major bump (X+1.0.0) is manual only: Actions → Release →
+# "Run workflow" → bump = major.
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "auto = feat/fix from commits · major = X+1.0.0"
+        type: choice
+        options: [auto, major]
+        default: auto
 
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false      # queue overlapping pushes, never race a version
+
 jobs:
-  dmg:
+  release:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0          # full history → correct CURRENT_PROJECT_VERSION
+          fetch-depth: 0          # full history → tags + commit count
+
+      - name: Compute next version
+        id: ver
+        env:
+          BUMP: ${{ github.event.inputs.bump || 'auto' }}
+        run: sh scripts/next-version.sh
+
+      - name: Nothing to release
+        if: steps.ver.outputs.should_release != 'true'
+        run: echo "No feat/fix commits since the last tag — skipping."
 
       - name: Install tooling
+        if: steps.ver.outputs.should_release == 'true'
         run: brew install xcodegen create-dmg
 
-      - name: Sync version from VERSION file
-        run: sh scripts/sync-version.sh
-
-      - name: Verify tag matches VERSION
+      - name: Sync version into project
+        if: steps.ver.outputs.should_release == 'true'
         run: |
-          tag="${GITHUB_REF_NAME#v}"
-          file="$(tr -d ' \t\n\r' < VERSION)"
-          if [ "$tag" != "$file" ]; then
-            echo "::error::tag $GITHUB_REF_NAME does not match VERSION ($file)"
-            exit 1
-          fi
+          printf '%s\n' "${{ steps.ver.outputs.version }}" > VERSION
+          sh scripts/sync-version.sh
 
       - name: Generate Xcode project
+        if: steps.ver.outputs.should_release == 'true'
         run: xcodegen generate
 
       - name: Archive (Release, ad-hoc)
+        if: steps.ver.outputs.should_release == 'true'
         run: |
           xcodebuild -project SideNote.xcodeproj -scheme SideNote \
             -configuration Release \
             -archivePath "$RUNNER_TEMP/SideNote.xcarchive" archive
 
       - name: Build .dmg
+        if: steps.ver.outputs.should_release == 'true'
         run: |
           app="$RUNNER_TEMP/SideNote.xcarchive/Products/Applications/SideNote.app"
           test -d "$app" || { echo "::error::no SideNote.app in archive"; exit 1; }
@@ -56,12 +76,18 @@ jobs:
             --icon "SideNote.app" 175 200 \
             --hide-extension "SideNote.app" \
             --app-drop-link 425 200 \
-            "side-note-${GITHUB_REF_NAME#v}.dmg" "$app"
+            "side-note-${{ steps.ver.outputs.version }}.dmg" "$app"
 
-      - name: Attach .dmg to a DRAFT release
+      - name: Publish public release
+        if: steps.ver.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          draft: true                       # owner publishes manually
-          name: "side-note ${{ github.ref_name }}"
+          tag_name: ${{ steps.ver.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: "side-note ${{ steps.ver.outputs.tag }}"
+          draft: false                  # public immediately
+          prerelease: false
+          make_latest: true
+          generate_release_notes: true  # notes auto-built from commits
           files: "side-note-*.dmg"
           fail_on_unmatched_files: true
