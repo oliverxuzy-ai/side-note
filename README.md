@@ -40,11 +40,32 @@ Open them in Obsidian, Vim, or any editor. No database, no sync, no lock-in.
 | **M1** Slide-in spike | NSPanel + single-spring slide, glass, shadow | ✅ done |
 | **M2** Core read/write | file storage, Markdown render, editor, search, CRUD | ✅ done |
 | **M3** Visual polish | fonts, typography, micro-motion, edge-hover | ✅ code done · ⏳ fonts/demo |
-| **M4** Ship | self-signed `.dmg` on GitHub Releases | ⏳ next |
+| **M4** Ship | self-signed `.dmg` on GitHub Releases | 🔜 packaging |
 
 **M3 has two owner-only items left**: dropping the PP Editorial New font into
 `SideNote/Resources/Fonts/` (display headlines fall back to a system serif
 until then — see [`PLAN.md`](PLAN.md)), and recording the 30-second demo.
+
+---
+
+## Download & install
+
+Grab the latest `side-note-x.y.z.dmg` from
+**[Releases](https://github.com/oliverxuzy-ai/side-note/releases)**.
+
+1. Double-click the `.dmg` to mount it
+2. Drag **SideNote.app** onto the **Applications** shortcut
+3. **First launch — right-click the app → Open** (then *Open* again in the dialog)
+
+> Step 3 is required once. side-note is self-signed (ad-hoc), not notarized, so
+> macOS Gatekeeper will refuse a normal double-click the first time. Right-click
+> → Open tells macOS you trust it. After that it launches normally. Notarization
+> is a v2 item.
+
+**Requirements**: macOS 14.0 (Sonoma) or later. Apple Silicon & Intel.
+
+There is no Dock icon — side-note lives in the **menu bar**. Click the menu-bar
+icon or press `⌃⇧Space` to slide it in.
 
 ---
 
