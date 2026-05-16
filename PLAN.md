@@ -399,6 +399,12 @@ DMG 通过；用户实测后指出两个核心差距（已落地，详见 DESIGN
    坚持 DESIGN.md：**不加** loading shimmer/spinner（本地 IO 瞬时，装饰性 motion
    违背设计原则）——已与用户说明此张力。
 
+3. **列表/待办 + 滑动操作**（用户二轮反馈："还缺 bullet/to-do 样子 + 卡片左右滑"）：
+   - 任务列表纳入 v1 子集；`MarkdownLayoutManager` 原位画 • / ☐ / ☑（文本不动），
+     复选框可点击翻转 `[ ]`↔`[x]`
+   - `SwipeableCard`：右滑 pin、左滑删除（手写 DragGesture，删除色用近黑非红）
+   - 17 单测全绿（+task/bullet tokenization）
+
 待用户：PP Editorial New 字体 + demo 视频仍未补；补字体后重切 .dmg 替换 draft。
 
 ---

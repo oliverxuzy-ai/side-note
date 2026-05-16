@@ -6,6 +6,8 @@ struct NoteListView: View {
 
     let notes: [NoteFile]
     let onSelect: (NoteFile) -> Void
+    let onPin: (NoteFile) -> Void
+    let onDelete: (NoteFile) -> Void
 
     var body: some View {
         ScrollView {
@@ -14,10 +16,12 @@ struct NoteListView: View {
                     emptyState
                 } else {
                     ForEach(notes) { note in
-                        Button { onSelect(note) } label: {
-                            NoteCard(note: note)
-                        }
-                        .buttonStyle(PressableButtonStyle(scale: 0.985))
+                        SwipeableCard(
+                            note: note,
+                            onTap: { onSelect(note) },
+                            onPin: { onPin(note) },
+                            onDelete: { onDelete(note) }
+                        )
                         .hoverLift()
                     }
                 }

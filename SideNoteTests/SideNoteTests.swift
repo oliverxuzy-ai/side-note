@@ -133,6 +133,22 @@ final class SideNoteTests: XCTestCase {
         XCTAssertNil(h.firstMatch(in: none, range: NSRange(location: 0, length: (none as NSString).length)))
     }
 
+    func testTaskAndBulletTokenization() {
+        typealias C = LiveMarkdownEditor.Coordinator
+        func matches(_ re: NSRegularExpression, _ s: String) -> Bool {
+            re.firstMatch(in: s, range: NSRange(location: 0, length: (s as NSString).length)) != nil
+        }
+        // task: group1 = "- " 前缀, group2 = 勾选字符
+        XCTAssertEqual(cap1(C.task, "- [ ] buy milk"), "- ")
+        XCTAssertEqual(cap1(C.task, "  - [x] done"), "  - ")
+        XCTAssertTrue(matches(C.task, "* [X] starred"))
+        XCTAssertFalse(matches(C.task, "- not a task"))
+        // bullet 命中普通项但 task 行也命中 bullet → highlighter 里 task 优先判定
+        XCTAssertEqual(cap1(C.bullet, "- plain item"), "-")
+        XCTAssertEqual(cap1(C.bullet, "+ plus item"), "+")
+        XCTAssertFalse(matches(C.bullet, "-no space"))
+    }
+
     func testHalfTypedMarkdownDoesNotMatch() {
         // live editing 输入到一半不能误上样式 / 不能崩
         XCTAssertNil(cap1(LiveMarkdownEditor.Coordinator.bold, "**unterminated"))

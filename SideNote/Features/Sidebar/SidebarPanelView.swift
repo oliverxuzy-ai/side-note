@@ -106,9 +106,12 @@ struct SidebarPanelView: View {
 
             Divider().overlay(.faintLine)
 
-            NoteListView(notes: store.filtered(query)) { note in
-                withAnimation(.viewSwap) { selectedID = note.id }
-            }
+            NoteListView(
+                notes: store.filtered(query),
+                onSelect: { note in withAnimation(.viewSwap) { selectedID = note.id } },
+                onPin: { note in store.togglePin(note) },
+                onDelete: { note in store.delete(note) }
+            )
 
             Divider().overlay(.faintLine)
 
