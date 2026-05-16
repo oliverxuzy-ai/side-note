@@ -34,6 +34,20 @@ struct HotkeyRecorderField: NSViewRepresentable {
         override var acceptsFirstResponder: Bool { true }
         override var intrinsicContentSize: NSSize { NSSize(width: NSView.noIntrinsicMetric, height: 30) }
 
+        private var hovering = false { didSet { needsDisplay = true } }
+
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            trackingAreas.forEach(removeTrackingArea)
+            addTrackingArea(NSTrackingArea(
+                rect: bounds,
+                options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
+                owner: self))
+        }
+
+        override func mouseEntered(with event: NSEvent) { hovering = true }
+        override func mouseExited(with event: NSEvent)  { hovering = false }
+
         override func mouseDown(with event: NSEvent) {
             window?.makeFirstResponder(self)
             isRecording = true
@@ -86,12 +100,15 @@ struct HotkeyRecorderField: NSViewRepresentable {
             let r = bounds.insetBy(dx: 1, dy: 1)
             let path = NSBezierPath(roundedRect: r, xRadius: 8, yRadius: 8)
 
-            NSColor.white.withAlphaComponent(0.55).setFill()
+            NSColor.white.withAlphaComponent(hovering && !isRecording ? 0.72 : 0.55).setFill()
             path.fill()
 
             if isRecording {
                 NSColor(Color.sage).setStroke()
                 path.lineWidth = 2
+            } else if hovering {
+                NSColor(Color.textPrimary).withAlphaComponent(0.18).setStroke()
+                path.lineWidth = 1
             } else {
                 NSColor(Color.textPrimary).withAlphaComponent(0.07).setStroke()
                 path.lineWidth = 1

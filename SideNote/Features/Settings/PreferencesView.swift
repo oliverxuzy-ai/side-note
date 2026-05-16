@@ -92,7 +92,7 @@ struct PreferencesView: View {
                 }
             }
             .font(Typography.button)
-            .buttonStyle(.plain)
+            .buttonStyle(PressableButtonStyle())
             .foregroundStyle(.sageDeep)
         }
         .padding(12)

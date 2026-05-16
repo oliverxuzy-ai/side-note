@@ -110,6 +110,7 @@ private struct SlashMenuView: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(model.items.enumerated()), id: \.element.id) { idx, cmd in
                 SlashRow(cmd: cmd, selected: idx == model.selection)
+                    .onHover { if $0 { model.selection = idx } }   // hover = 选中（与键盘统一）
                     .onTapGesture { onPick(idx) }
             }
         }
