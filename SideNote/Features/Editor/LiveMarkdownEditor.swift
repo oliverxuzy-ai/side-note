@@ -37,6 +37,10 @@ extension NSAttributedString.Key {
     static let snBullet = NSAttributedString.Key("snBullet")
     /// 标在 `[ ]` / `[x]` 上，value = Bool（是否勾选）→ 画复选框。
     static let snCheckbox = NSAttributedString.Key("snCheckbox")
+    /// 标在围栏代码块整段（含 ``` 行）上 → layout manager 画圆角底 + hairline 边。
+    static let snCodeBlock = NSAttributedString.Key("snCodeBlock")
+    /// 标在引用块整段上 → layout manager 画左侧 2pt accent-soft 立柱。
+    static let snQuote = NSAttributedString.Key("snQuote")
 }
 
 // MARK: - Layout manager that draws bullets / checkboxes
@@ -44,6 +48,49 @@ extension NSAttributedString.Key {
 /// 原始标记字符在 highlighter 里被设成 `.clear`（隐形但仍占位、文本不变），
 /// 这里在它们的位置上画真正的 • / ☐ / ☑。光标/撤销/选区完全不受影响。
 final class MarkdownLayoutManager: NSLayoutManager {
+
+    /// 背景层：代码块圆角底 + hairline 边、引用块左立柱、行内 code wash。
+    /// 在 glyph 之前画（drawGlyphs 之后画 • / ☐ / ☑ 前景）。
+    override func drawBackground(forGlyphRange glyphsToShow: NSRange, at origin: NSPoint) {
+        super.drawBackground(forGlyphRange: glyphsToShow, at: origin) // 行内 code .backgroundColor
+        guard let ts = textStorage, textContainers.first != nil else { return }
+        let charRange = characterRange(forGlyphRange: glyphsToShow, actualGlyphRange: nil)
+
+        // 围栏代码块：取整段所有 line fragment 的并集 → 一个圆角块
+        ts.enumerateAttribute(.snCodeBlock, in: charRange) { value, range, _ in
+            guard value != nil else { return }
+            let gr = self.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+            var union = NSRect.null
+            self.enumerateLineFragments(forGlyphRange: gr) { rect, _, _, _, _ in
+                union = union.isNull ? rect : union.union(rect)
+            }
+            guard !union.isNull else { return }
+            let bg = NSRect(x: origin.x + union.minX + 2,
+                            y: origin.y + union.minY + 1,
+                            width: union.width - 4,
+                            height: union.height - 2)
+            let path = NSBezierPath(roundedRect: bg, xRadius: 8, yRadius: 8)
+            NSColor(Color.textPrimary).withAlphaComponent(0.04).setFill()
+            path.fill()
+            NSColor(Color.textPrimary).withAlphaComponent(0.07).setStroke()
+            path.lineWidth = 1
+            path.stroke()
+        }
+
+        // 引用块：每个 line fragment 左侧 2pt accent-soft 立柱
+        ts.enumerateAttribute(.snQuote, in: charRange) { value, range, _ in
+            guard value != nil else { return }
+            let gr = self.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+            self.enumerateLineFragments(forGlyphRange: gr) { rect, _, _, _, _ in
+                let bar = NSRect(x: origin.x + rect.minX + 3,
+                                 y: origin.y + rect.minY + 1,
+                                 width: 2,
+                                 height: rect.height - 2)
+                NSColor(Color.sageSoft).setFill()
+                NSBezierPath(rect: bar).fill()
+            }
+        }
+    }
 
     override func drawGlyphs(forGlyphRange glyphsToShow: NSRange, at origin: NSPoint) {
         super.drawGlyphs(forGlyphRange: glyphsToShow, at: origin)
@@ -205,6 +252,7 @@ struct LiveMarkdownEditor: NSViewRepresentable {
 
     final class Coordinator: NSObject, NSTextViewDelegate, NSTextStorageDelegate {
         private let parent: LiveMarkdownEditor
+        let slash = SlashMenuController()
         var isEditing = false
 
         init(_ parent: LiveMarkdownEditor) { self.parent = parent }
@@ -213,7 +261,26 @@ struct LiveMarkdownEditor: NSViewRepresentable {
             guard let tv = note.object as? NSTextView else { return }
             isEditing = true
             parent.text = tv.string
+            slash.handleTextChange(tv)
             DispatchQueue.main.async { self.isEditing = false }
+        }
+
+        func textViewDidChangeSelection(_ note: Notification) {
+            guard slash.isVisible, let tv = note.object as? NSTextView else { return }
+            slash.handleTextChange(tv)   // caret 移出 "/token" → 自动关
+        }
+
+        /// slash 菜单可见时拦截方向键/回车/Tab/Esc 驱动选择，文本视图仍是第一响应者。
+        func textView(_ tv: NSTextView, doCommandBy sel: Selector) -> Bool {
+            guard slash.isVisible else { return false }
+            switch sel {
+            case #selector(NSResponder.moveDown(_:)):      slash.move(1);  return true
+            case #selector(NSResponder.moveUp(_:)):        slash.move(-1); return true
+            case #selector(NSResponder.insertNewline(_:)),
+                 #selector(NSResponder.insertTab(_:)):     slash.confirm(); return true
+            case #selector(NSResponder.cancelOperation(_:)): slash.dismiss(); return true
+            default: return false
+            }
         }
 
         func textStorage(_ storage: NSTextStorage,
@@ -240,30 +307,33 @@ struct LiveMarkdownEditor: NSViewRepresentable {
             guard full.length > 0 else { return }
 
             storage.beginEditing()
+            // setAttributes 整体替换属性字典 → 自动清掉上一轮的 paragraphStyle /
+            // backgroundColor / snBullet / snCheckbox / snCodeBlock / snQuote 残留。
             storage.setAttributes([
                 .font: EditorFont.body(15),
                 .foregroundColor: bodyColor
             ], range: full)
-            // 清掉上一轮的自定义标记，避免残留
-            storage.removeAttribute(.snBullet, range: full)
-            storage.removeAttribute(.snCheckbox, range: full)
-            storage.removeAttribute(.strikethroughStyle, range: full)
 
             var inFence = false
-            ns.enumerateSubstrings(in: full, options: .byLines) { line, lineRange, _, _ in
+            ns.enumerateSubstrings(in: full, options: .byLines) { line, lineRange, encl, _ in
                 guard let line else { return }
                 let t = line.trimmingCharacters(in: .whitespaces)
                 let lineNS = line as NSString
                 let lineLen = lineNS.length
 
+                // 围栏代码块（``` 行 + 块内行都标 snCodeBlock，整段连续 → 一个圆角块）
                 if t.hasPrefix("```") {
                     inFence.toggle()
                     storage.addAttributes([.font: EditorFont.mono(13.5),
-                                           .foregroundColor: self.fadedColor], range: lineRange)
+                                           .foregroundColor: self.fadedColor,
+                                           .snCodeBlock: true,
+                                           .paragraphStyle: Self.codeStyle], range: encl)
                     return
                 }
                 if inFence {
-                    storage.addAttributes([.font: EditorFont.mono(13.5)], range: lineRange)
+                    storage.addAttributes([.font: EditorFont.mono(13.5),
+                                           .snCodeBlock: true,
+                                           .paragraphStyle: Self.codeStyle], range: encl)
                     return
                 }
                 // 标题
@@ -276,12 +346,17 @@ struct LiveMarkdownEditor: NSViewRepresentable {
                     storage.addAttribute(.foregroundColor, value: self.fadedColor, range: mr)
                     return
                 }
-                // To-Do：- [ ] / - [x]（group1 = "- " 前缀，group2 = 勾选字符）
+                // To-Do：- [ ] / - [x]（group0 = 整前缀，group1 = "\s*[-*+] "，group2 = 勾选字符）
                 if let m = Self.task.firstMatch(in: line, range: NSRange(location: 0, length: lineLen)) {
                     let checked = lineNS.substring(with: m.range(at: 2)).lowercased() == "x"
                     let prefix = m.range(at: 0)                      // "- [ ] " 整段
                     let g1 = m.range(at: 1)                          // "\s*[-*+] "
                     let boxOpen = g1.location + g1.length            // '[' 的行内位置
+                    let leadWS = lineNS.substring(with: m.range(at: 1))
+                        .prefix { $0 == " " || $0 == "\t" }
+                    self.hang(storage, encl,
+                              first: self.w(String(leadWS)),
+                              body: self.w(lineNS.substring(with: prefix)))
                     // 整个前缀隐形（• 不画，复选框代替）
                     storage.addAttribute(.foregroundColor, value: self.clear,
                                           range: NSRange(location: lineRange.location,
@@ -304,14 +379,30 @@ struct LiveMarkdownEditor: NSViewRepresentable {
                 }
                 // 普通 bullet：-/*/+
                 if let m = Self.bullet.firstMatch(in: line, range: NSRange(location: 0, length: lineLen)) {
+                    let g0 = m.range(at: 0)                          // 含前导空白 + "-" + 空格
                     let marker = m.range(at: 1)                      // 单个 -/*/+
+                    let leadWS = lineNS.substring(with: g0).prefix { $0 == " " || $0 == "\t" }
+                    self.hang(storage, encl,
+                              first: self.w(String(leadWS)),
+                              body: self.w(lineNS.substring(with: g0)))
                     let mr = NSRange(location: lineRange.location + marker.location, length: 1)
                     storage.addAttribute(.foregroundColor, value: self.clear, range: mr)
                     storage.addAttribute(.snBullet, value: true, range: mr)
                     return
                 }
-                // 引用
+                // 有序列表：1. 2. …（数字保留可见——它是语义不是语法；只挂悬挂缩进）
+                if let m = Self.ordered.firstMatch(in: line, range: NSRange(location: 0, length: lineLen)) {
+                    let g0 = m.range(at: 0)                          // "  12. "
+                    let leadWS = lineNS.substring(with: m.range(at: 1))
+                    self.hang(storage, encl,
+                              first: self.w(leadWS),
+                              body: self.w(lineNS.substring(with: g0)))
+                    return
+                }
+                // 引用：左立柱由 layout manager 画；这里挂 12pt 缩进 + 变淡文字
                 if t.hasPrefix(">") {
+                    storage.addAttribute(.snQuote, value: true, range: encl)
+                    storage.addAttribute(.paragraphStyle, value: Self.quoteStyle, range: encl)
                     storage.addAttribute(.foregroundColor, value: self.mutedColor, range: lineRange)
                     if let gt = line.firstIndex(of: ">") {
                         let off = line.distance(from: line.startIndex, to: gt)
@@ -321,8 +412,11 @@ struct LiveMarkdownEditor: NSViewRepresentable {
                 }
             }
 
+            // 行内 pass 跳过代码块内部（围栏里的 `` ` `` / ** 不再二次上样式）
             self.applyInline(Self.code,   storage, ns, full) { s, c, mk in
                 s.addAttribute(.font, value: EditorFont.mono(13), range: c)
+                s.addAttribute(.backgroundColor,
+                               value: NSColor(Color.textPrimary).withAlphaComponent(0.05), range: c)
                 s.addAttribute(.foregroundColor, value: self.fadedColor, range: mk.0)
                 s.addAttribute(.foregroundColor, value: self.fadedColor, range: mk.1)
             }
@@ -341,12 +435,28 @@ struct LiveMarkdownEditor: NSViewRepresentable {
             storage.endEditing()
         }
 
+        /// 列表悬挂缩进：第一行从 marker 处起，换行回绕对齐到内容（非 marker）。
+        /// proportional 字体下这是 live-edit「做得好不好」的第一杠杆。
+        private func hang(_ s: NSTextStorage, _ range: NSRange,
+                          first: CGFloat, body: CGFloat) {
+            let p = NSMutableParagraphStyle()
+            p.firstLineHeadIndent = first
+            p.headIndent = body
+            s.addAttribute(.paragraphStyle, value: p, range: range)
+        }
+
+        /// 用 body 字体测一段字符串的渲染宽度（算悬挂缩进的列宽）。
+        private func w(_ str: String) -> CGFloat {
+            (str as NSString).size(withAttributes: [.font: EditorFont.body(15)]).width
+        }
+
         private func applyInline(_ re: NSRegularExpression, _ s: NSTextStorage,
                                  _ ns: NSString, _ full: NSRange,
                                  _ style: (NSTextStorage, NSRange, (NSRange, NSRange)) -> Void) {
             for m in re.matches(in: ns as String, range: full) {
                 guard m.numberOfRanges >= 2 else { continue }
                 let whole = m.range(at: 0)
+                if s.attribute(.snCodeBlock, at: whole.location, effectiveRange: nil) != nil { continue }
                 let content = m.range(at: 1)
                 let open = NSRange(location: whole.location, length: content.location - whole.location)
                 let close = NSRange(location: content.location + content.length,
@@ -360,6 +470,7 @@ struct LiveMarkdownEditor: NSViewRepresentable {
             for m in Self.link.matches(in: ns as String, range: full) {
                 guard m.numberOfRanges >= 3 else { continue }
                 let whole = m.range(at: 0)
+                if s.attribute(.snCodeBlock, at: whole.location, effectiveRange: nil) != nil { continue }
                 let label = m.range(at: 1)
                 s.addAttribute(.foregroundColor, value: linkColor, range: label)
                 s.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: label)
@@ -378,9 +489,27 @@ struct LiveMarkdownEditor: NSViewRepresentable {
         static let heading = try! NSRegularExpression(pattern: "^(#{1,6})\\s")
         static let task    = try! NSRegularExpression(pattern: "^(\\s*[-*+] )\\[([ xX])\\] ")
         static let bullet  = try! NSRegularExpression(pattern: "^\\s*([-*+]) ")
+        static let ordered = try! NSRegularExpression(pattern: "^(\\s*)\\d{1,9}\\. ")
         static let code    = try! NSRegularExpression(pattern: "`([^`\\n]+)`")
         static let bold    = try! NSRegularExpression(pattern: "\\*\\*([^*\\n]+)\\*\\*")
         static let italic  = try! NSRegularExpression(pattern: "(?<![\\*_])[\\*_]([^\\*_\\n]+)[\\*_](?![\\*_])")
         static let link    = try! NSRegularExpression(pattern: "\\[([^\\]\\n]+)\\]\\(([^)\\n]+)\\)")
+
+        /// 代码块段落样式：10pt 左缩进 + 右内缩，给圆角底留 padding（DESIGN.md）。
+        static let codeStyle: NSParagraphStyle = {
+            let p = NSMutableParagraphStyle()
+            p.firstLineHeadIndent = 10
+            p.headIndent = 10
+            p.tailIndent = -8
+            return p
+        }()
+
+        /// 引用块段落样式：12pt 缩进，给左立柱让位（DESIGN.md）。
+        static let quoteStyle: NSParagraphStyle = {
+            let p = NSMutableParagraphStyle()
+            p.firstLineHeadIndent = 12
+            p.headIndent = 12
+            return p
+        }()
     }
 }
