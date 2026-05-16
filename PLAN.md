@@ -319,11 +319,19 @@ create-dmg 打包 → 挂载 → 拖装布局 → 拷出到干净路径启动正
 | （计划未提 app 图标） | 用锁定 sage 体系生成**占位图标**（squircle + 右侧滑入面板 motif + 一条 sageDeep 置顶线） | 无图标的 .app 发给朋友显得没做完。占位图标只用 DESIGN.md 已锁的 sage，可随时替换；不是新品牌方向 |
 | 装饰 .dmg 背景图 | create-dmg 默认样式 | PLAN Risk 已写：v1 默认样式够干净，装饰图推 v1.1 |
 
-### ⏳ 待用户（发布前的 owner-only）
+### 已发 draft release（2026-05-16）
 
-1. **确认是否现在公开发布**：发 GitHub Release 是公开、难撤销操作，未经确认不发；可选先发 **draft release**（仅协作者可见、可删）让你过目
-2. **截图 + 30 秒 demo**（M3 遗留，DoD 要求）：README/release notes 的视觉素材，只能你来
-3. **（建议但不强制）补 PP Editorial New 字体再发**：现在标题是系统衬线回退，发出去等于 v1 没兑现"设计即品牌"北极星。补字体重 build 即可，无需改码
+`v0.1.0` tag 已推；GitHub **draft** release 已建（`isDraft: true`，仅协作者可见、
+可删/改），附件 `side-note-0.1.0.dmg`（1.9M，adhoc 签名，本地全链路验证通过）。
+release notes 见仓库 release 草稿。
+
+### ⏳ 待用户（公开发布前的 owner-only）
+
+1. **过目 draft**，确认无误后手动 publish（un-draft）即对外可见
+2. **截图 + 30 秒 demo**（M3 遗留，DoD 要求）：README/release notes 视觉素材，只能你来
+3. **（建议但不强制）补 PP Editorial New 字体再 publish**：现在标题是系统衬线回退，
+   公开发等于 v1 没兑现"设计即品牌"北极星。补字体 → 重 build → 重打 .dmg → 替换
+   draft 附件即可，无需改码。需要时我来重切 .dmg
 
 ### Tasks
 
