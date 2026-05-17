@@ -25,7 +25,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.oliverxuzy.side-note
-        PRODUCT_NAME: SideNote
+        PRODUCT_NAME: HoverNote          # .app 文件名 = HoverNote.app（显示名）
+        PRODUCT_MODULE_NAME: SideNote    # 内部 Swift 模块仍叫 SideNote（@testable import 不变）
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "27"
         SWIFT_VERSION: "5.10"
@@ -56,7 +57,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_VERSION: "5.10"
         BUNDLE_LOADER: "$(TEST_HOST)"
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/SideNote.app/Contents/MacOS/SideNote"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/HoverNote.app/Contents/MacOS/HoverNote"
 
 schemes:
   SideNote:

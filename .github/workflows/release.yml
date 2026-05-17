@@ -74,17 +74,17 @@ jobs:
       - name: Build .dmg
         if: steps.ver.outputs.should_release == 'true'
         run: |
-          app="$RUNNER_TEMP/SideNote.xcarchive/Products/Applications/SideNote.app"
-          test -d "$app" || { echo "::error::no SideNote.app in archive"; exit 1; }
+          app="$RUNNER_TEMP/SideNote.xcarchive/Products/Applications/HoverNote.app"
+          test -d "$app" || { echo "::error::no HoverNote.app in archive"; exit 1; }
           create-dmg \
-            --volname "side-note" \
+            --volname "HoverNote" \
             --window-pos 200 120 \
             --window-size 600 400 \
             --icon-size 100 \
-            --icon "SideNote.app" 175 200 \
-            --hide-extension "SideNote.app" \
+            --icon "HoverNote.app" 175 200 \
+            --hide-extension "HoverNote.app" \
             --app-drop-link 425 200 \
-            "side-note-${{ steps.ver.outputs.version }}.dmg" "$app"
+            "HoverNote-${{ steps.ver.outputs.version }}.dmg" "$app"
 
       - name: Publish public release
         if: steps.ver.outputs.should_release == 'true'
@@ -92,10 +92,10 @@ jobs:
         with:
           tag_name: ${{ steps.ver.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: "side-note ${{ steps.ver.outputs.tag }}"
+          name: "HoverNote ${{ steps.ver.outputs.tag }}"
           draft: false                  # public immediately
           prerelease: false
           make_latest: true
           generate_release_notes: true  # notes auto-built from commits
-          files: "side-note-*.dmg"
+          files: "HoverNote-*.dmg"
           fail_on_unmatched_files: true

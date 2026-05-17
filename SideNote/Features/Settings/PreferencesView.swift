@@ -81,7 +81,7 @@ struct PreferencesView: View {
             Text("Needs Accessibility permission")
                 .font(Typography.button)
                 .foregroundStyle(.sageDeep)
-            Text("side-note watches the cursor position to detect the edge. Grant access in System Settings → Privacy & Security → Accessibility.")
+            Text("HoverNote watches the cursor position to detect the edge. Grant access in System Settings → Privacy & Security → Accessibility.")
                 .font(Typography.meta)
                 .foregroundStyle(.textMuted)
                 .fixedSize(horizontal: false, vertical: true)

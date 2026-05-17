@@ -1,6 +1,6 @@
 <div align="center">
 
-# side-note
+# HoverNote
 
 **A Mac sidebar Markdown notebook that slides in from the edge of your screen.**
 The most quietly beautiful notes app on macOS — or it's not worth shipping.
@@ -53,22 +53,22 @@ a **GitHub draft** with the `.dmg` attached, pending those — see [`PLAN.md`](P
 
 ## Download & install
 
-Once published, grab the latest `side-note-x.y.z.dmg` from
-**[Releases](https://github.com/oliverxuzy-ai/side-note/releases)**.
+Once published, grab the latest `HoverNote-x.y.z.dmg` from
+**[Releases](https://github.com/oliverxuzy-ai/HoverNote/releases)**.
 *(v0.1.0 is currently a draft pending the demo + display font.)*
 
 1. Double-click the `.dmg` to mount it
-2. Drag **SideNote.app** onto the **Applications** shortcut
+2. Drag **HoverNote.app** onto the **Applications** shortcut
 3. **First launch — right-click the app → Open** (then *Open* again in the dialog)
 
-> Step 3 is required once. side-note is self-signed (ad-hoc), not notarized, so
+> Step 3 is required once. HoverNote is self-signed (ad-hoc), not notarized, so
 > macOS Gatekeeper will refuse a normal double-click the first time. Right-click
 > → Open tells macOS you trust it. After that it launches normally. Notarization
 > is a v2 item.
 
 **Requirements**: macOS 14.0 (Sonoma) or later. Apple Silicon & Intel.
 
-There is no Dock icon — side-note lives in the **menu bar**. Click the menu-bar
+There is no Dock icon — HoverNote lives in the **menu bar**. Click the menu-bar
 icon or press `⌃⇧Space` to slide it in.
 
 ---

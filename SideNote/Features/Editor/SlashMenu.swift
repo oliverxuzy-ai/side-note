@@ -230,7 +230,7 @@ final class SlashMenuController {
         host.layoutSubtreeIfNeeded()       // 让 fittingSize 变有效
         panel = p
         reposition()
-        // side-note 是后台 LSUIElement App：非 key 窗口 macOS 不渲染。主面板靠
+        // HoverNote 是后台 LSUIElement App：非 key 窗口 macOS 不渲染。主面板靠
         // makeKeyAndOrderFront 显示；slash 子面板挂成它的 child window → 随父
         // 一起显示（后台也可见）、跟随父移动，且永远在父之上。
         if let parent = tv.window {

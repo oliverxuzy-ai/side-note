@@ -87,9 +87,9 @@ final class NoteStore {
     private func seedIfEmpty() {
         guard notes.isEmpty else { return }
         let welcome = NoteFile(
-            title: "Welcome to side-note",
+            title: "Welcome to HoverNote",
             body: """
-            # Welcome to side-note
+            # Welcome to HoverNote
 
             A Markdown notebook that slides in from the edge of your screen.
 
@@ -197,7 +197,7 @@ final class NoteStore {
             try content.data(using: .utf8)?.write(to: url, options: .atomic)
             lastWritten[note.id] = content
         } catch {
-            NSLog("[side-note] write failed for \(note.fileName): \(error)")
+            NSLog("[HoverNote] write failed for \(note.fileName): \(error)")
         }
     }
 

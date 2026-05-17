@@ -1,4 +1,4 @@
-# side-note — Unit Test Plan
+# HoverNote — Unit Test Plan
 
 > Scope of this round: lock down the four features added on top of the M0–M4
 > baseline (live-edit gaps, configurable hotkey, slash menu) and the version

@@ -30,7 +30,7 @@ enum FontRegistration {
             var error: Unmanaged<CFError>?
             if !CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error) {
                 // 已注册 / 重复不是致命错误——只在真失败时记一笔
-                NSLog("[side-note] font register skipped: \(url.lastPathComponent)")
+                NSLog("[HoverNote] font register skipped: \(url.lastPathComponent)")
             }
         }
     }

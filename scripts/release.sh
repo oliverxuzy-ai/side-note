@@ -56,27 +56,27 @@ archive="$work/SideNote.xcarchive"
 xcodebuild -project SideNote.xcodeproj -scheme SideNote \
   -configuration Release -archivePath "$archive" archive
 
-app="$archive/Products/Applications/SideNote.app"
-[ -d "$app" ] || { echo "release: archive produced no SideNote.app" >&2; exit 1; }
+app="$archive/Products/Applications/HoverNote.app"
+[ -d "$app" ] || { echo "release: archive produced no HoverNote.app" >&2; exit 1; }
 
 # Stale mount guard (zsh aborts && chains on no-glob-match; test explicitly)
-if [ -d "/Volumes/side-note" ]; then hdiutil detach "/Volumes/side-note" -quiet || true; fi
+if [ -d "/Volumes/HoverNote" ]; then hdiutil detach "/Volumes/HoverNote" -quiet || true; fi
 
-dmg="side-note-${next}.dmg"
+dmg="HoverNote-${next}.dmg"
 rm -f "$dmg"
 create-dmg \
-  --volname "side-note" \
+  --volname "HoverNote" \
   --window-pos 200 120 \
   --window-size 600 400 \
   --icon-size 100 \
-  --icon "SideNote.app" 175 200 \
-  --hide-extension "SideNote.app" \
+  --icon "HoverNote.app" 175 200 \
+  --hide-extension "HoverNote.app" \
   --app-drop-link 425 200 \
   "$dmg" "$app"
 
 git add VERSION project.yml
 git commit -m "chore: release v${next}"
-git tag -a "v${next}" -m "side-note v${next}"
+git tag -a "v${next}" -m "HoverNote v${next}"
 
 echo
 echo "release: built $dmg and tagged v${next}"

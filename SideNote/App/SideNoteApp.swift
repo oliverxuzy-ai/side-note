@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// side-note · entry point.
+/// HoverNote · entry point.
 ///
 /// 这是一个 LSUIElement = true 的菜单栏 App。
 /// - 不通过 SwiftUI Scene 管理主面板（NSPanel 由 AppDelegate 手动管理，避免 SwiftUI Window 的限制）。
@@ -11,7 +11,7 @@ struct SideNoteApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        MenuBarExtra("side-note", systemImage: "note.text") {
+        MenuBarExtra("HoverNote", systemImage: "note.text") {
             Button("Toggle sidebar") {
                 appDelegate.toggleSidebar()
             }
@@ -24,13 +24,13 @@ struct SideNoteApp: App {
             }
             .keyboardShortcut(",", modifiers: [.command])
 
-            Button("About side-note") {
+            Button("About HoverNote") {
                 appDelegate.openAbout()
             }
 
             Divider()
 
-            Button("Quit side-note") {
+            Button("Quit HoverNote") {
                 NSApplication.shared.terminate(nil)
             }
             .keyboardShortcut("q", modifiers: [.command])

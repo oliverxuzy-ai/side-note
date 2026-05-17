@@ -1,4 +1,4 @@
-# Design System — side-note
+# Design System — HoverNote
 
 > Mac sidebar Markdown 笔记 App，设计驱动产品。
 > 通过 office-hours (2026-05-14) + design-consultation (2026-05-14) 收敛。
@@ -293,3 +293,4 @@ v1.1 推迟：图片、表格、脚注、删除线、嵌套引用、HTML 块。
 | 2026-05-16  | 发布策略反转：tag→draft（owner 手动公开）改为 **每次 push main 自动 publish 公开 Latest** | 用户明确要求并知悉「PP Editorial 字体/demo 未补」仍自动公开（推翻先前「不擅自公开」门）。`scripts/next-version.sh` 按 conventional commit 自动定版（feat→minor，fix→patch，无 feat/fix 则不发版）；major 仅手动 `workflow_dispatch`。workflow 触发改 `push: branches:[main]`，`softprops/action-gh-release` `draft:false make_latest:true generate_release_notes`。CI 不回写 commit（避免环），版本权威来源 = git tag |
 | 2026-05-16  | 全按钮补 hover 反馈框（用户："返回键鼠标移上去没效果"） | `PressableButtonStyle` 原本只有按下态、无 hover。加中性近黑 6% 圆角框（**非 sage**，保 accent 稀缺；cardState 120ms）覆盖返回/pin/冲突条/搜索清除；`SagePrimaryButtonStyle` 加 hover 提亮+轻抬；slash 行 hover=选中（与键盘统一）；Preferences `.plain`→Pressable；HotkeyRecorder NSView 加 NSTrackingArea。computer-use 截图验证返回/pin 框生效 |
 | 2026-05-16  | 全量 computer-use QA 修 5 项；确认 SwiftUI `.onHover` 在被 AppKit 子视图覆盖时收不到 | 卡片 hover 之前完全无效 = `.onHover` 被覆盖在卡上的 `SwipeCatcher` NSView 吃掉 → 改由 NSTrackingArea 经 binding 驱动 `NoteCard`（新增可复用 `HoverReporter`/`trackHover`）。复选框点击失效 = 逐字符 `.snCheckbox` 命中太脆 → 改 prefix glyph 矩形慷慨包含判定。About 版本号去硬编码改读 Bundle。HotkeyRecorder ⌫ 重置直接刷 display。搜索聚焦环仍不显示——nonactivating panel 里 SwiftUI focus/hover 的深层限制（同 `@FocusState`/slash 家族），留待专门修 |
+| 2026-05-16  | 产品改名 side-note → **HoverNote**（仅显示名，内部模块保留 `SideNote`） | 用户决定。改 UI 文案/Info.plist `CFBundleDisplayName`/`PRODUCT_NAME`（→ HoverNote.app）/.dmg/release pipeline/全文档/GitHub repo。`PRODUCT_MODULE_NAME: SideNote` 钉住 Swift 模块名 → `@testable import SideNote`、源码目录、target、scheme、**bundle id `com.oliverxuzy.side-note`**、**笔记路径 `~/Documents/SideNote/`** 全不动（不破构建、不重置 TCC、笔记不丢）。保留 FSEvents queue label 与外部 `~/.gstack/projects/side-note/` 产物路径。build + 29 测绿、产物 = HoverNote.app 验证 |

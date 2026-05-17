@@ -28,7 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         noteStore.bootstrap()
         panelController.bootstrap()
         applyEdgeHoverSetting()
-        NSLog("[side-note] M3 launched. ⌃⇧Space / menu bar / edge-hover (opt-in).")
+        NSLog("[HoverNote] M3 launched. ⌃⇧Space / menu bar / edge-hover (opt-in).")
     }
 
     // MARK: - Edge hover
@@ -59,7 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let hosting = NSHostingController(rootView: AboutView())
         let win = NSWindow(contentViewController: hosting)
-        win.title = "About side-note"
+        win.title = "About HoverNote"
         win.styleMask = [.titled, .closable]
         win.setContentSize(NSSize(width: 360, height: 240))
         win.center()
@@ -84,7 +84,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
-        win.title = "side-note Preferences"
+        win.title = "HoverNote Preferences"
         win.styleMask = [.titled, .closable]
         win.setContentSize(NSSize(width: 380, height: 380))
         win.center()
@@ -100,7 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 private struct AboutView: View {
     var body: some View {
         VStack(spacing: 12) {
-            Text("side-note")
+            Text("HoverNote")
                 .font(.system(size: 28, weight: .regular, design: .serif))
                 .foregroundStyle(.textPrimary)
 

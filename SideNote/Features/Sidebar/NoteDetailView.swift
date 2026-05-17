@@ -98,7 +98,7 @@ struct NoteDetailView: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 12))
                 .foregroundStyle(.sageDeep)
-            Text("Changed outside side-note")
+            Text("Changed outside HoverNote")
                 .font(Typography.meta)
                 .foregroundStyle(.textPrimary)
             Spacer()

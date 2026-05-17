@@ -1,4 +1,4 @@
-# side-note
+# HoverNote
 
 Mac sidebar Markdown 笔记 App，SwiftUI 原生，macOS 14+。
 

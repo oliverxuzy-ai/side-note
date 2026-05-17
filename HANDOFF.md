@@ -1,4 +1,4 @@
-# HANDOFF — side-note
+# HANDOFF — HoverNote
 
 > Fresh-context handoff. Read this + `DESIGN.md` + `PLAN.md` before working.
 
@@ -10,7 +10,7 @@ right screen edge. SwiftUI, macOS 14+, native materials. **North star: the
 product — interaction/animation craft is judged at Bear / Things 3 / Linear
 tier; "generic" is a failure (this bar is non-negotiable, see Memory below).
 
-Repo: `git@github.com:oliverxuzy-ai/side-note.git` · branch `main` · latest
+Repo: `git@github.com:oliverxuzy-ai/HoverNote.git` · branch `main` · latest
 commit `b5f49a2`. Local-only `changes.md` is auto-appended by a `pre-push`
 git hook (gitignored, not in repo).
 
@@ -25,7 +25,7 @@ Milestones M0–M4 complete + two rounds of post-DMG user feedback shipped:
   micro-motion tokens; edge-hover trigger (CGEventTap + Accessibility,
   opt-in via Preferences).
 - **M4**: `.dmg` pipeline works. **GitHub release `v0.1.0` is cut as a DRAFT**
-  (`isDraft: true`, tag pushed, `side-note-0.1.0.dmg` attached). NOT public.
+  (`isDraft: true`, tag pushed, `HoverNote-0.1.0.dmg` attached). NOT public.
 - **Post-feedback**: live Markdown editing (Bear-style, no edit/preview
   toggle — regex highlighter + custom `NSLayoutManager` drawing real `•`
   bullets and clickable `☐/☑` to-do; markers recede but text is intact);
@@ -43,7 +43,7 @@ HotKey is the only remaining SPM dependency.
 - Build/test: `xcodegen generate` then
   `xcodebuild -project SideNote.xcodeproj -scheme SideNote -configuration Debug build|test`.
 - `.dmg`: `xcodebuild -configuration Release archive` → copy
-  `SideNote.app` from `*.xcarchive/Products/Applications/` → `create-dmg`
+  `HoverNote.app` from `*.xcarchive/Products/Applications/` → `create-dmg`
   (route A = ad-hoc "Sign to Run Locally", no exportArchive).
 - Live editing without breaking cursor/undo: only change *attributes* (and
   draw glyphs in a custom layout manager), never mutate the text buffer.
@@ -64,8 +64,8 @@ HotKey is the only remaining SPM dependency.
   embedded test bundle ends up unsigned → "Command CodeSign failed"). Don't
   run a background archive while foreground-building. Fix: `rm -rf` the
   project's DerivedData dir and rebuild.
-- `create-dmg` fails if a stale `/Volumes/side-note` is mounted — detach
-  first. And zsh aborts a `&&` chain if a glob (`/Volumes/side-note*`) has
+- `create-dmg` fails if a stale `/Volumes/HoverNote` is mounted — detach
+  first. And zsh aborts a `&&` chain if a glob (`/Volumes/HoverNote*`) has
   no match — guard globs.
 - Publishing the GitHub release was blocked by the auto-mode classifier; the
   user ran the `gh release` / tag push themselves (or grants permission).
@@ -102,7 +102,7 @@ HotKey is the only remaining SPM dependency.
 
 ## Memory
 
-Persistent feedback memory recorded: this user holds side-note to
+Persistent feedback memory recorded: this user holds HoverNote to
 Bear/Things-tier interaction craft; lead with the crafted version, never the
 first thing that compiles; respect DESIGN.md's ban on decorative loaders
 (local IO is instant — no shimmer/spinners).
